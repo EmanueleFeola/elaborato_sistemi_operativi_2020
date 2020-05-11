@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <errno.h>
 
+// TODO: print with colors
 void ErrExit(const char *msg)
 {
     perror(msg);
