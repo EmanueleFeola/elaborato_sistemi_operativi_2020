@@ -71,6 +71,12 @@ int main(int argc, char * argv[]) {
         sleep(2);
     }
 
+    /*
+    // spiegazione signal queuing 
+    https://stackoverflow.com/questions/5285414/signal-queuing-in-c
+    https://www.quora.com/Why-cant-signal-handlers-block-i-e-go-to-sleep-in-Linux-Isnt-invoking-a-signal-handler-similar-to-calling-a-function-in-which-sleep-is-allowed
+    */
+
     // Free resources if child terminates
     int status;
     pid_t endedPid;
