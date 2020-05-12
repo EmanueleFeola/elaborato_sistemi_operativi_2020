@@ -18,6 +18,18 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 
+#include <sys/sem.h>
+
+int semid;
+
+void freeResources(){
+    // per adesso c'è solo il semaforo
+    // più avanti ci sarà anche fifo, shm
+
+    if (semctl(semid, 0 /*ignored*/, IPC_RMID, NULL) == -1)
+        ErrExit("semctl IPC_RMID failed");
+}
+
 void setServerSignalMask(){
     // added SIGINT handler for debug purposes
     sigset_t set;
@@ -30,10 +42,13 @@ void setServerSignalMask(){
     signal(SIGTERM, serverSigHandler);
 }
 
+/*
+ * Free resources and children on SIGTERM / SIGINT (debug purposes only)
+ */
 void serverSigHandler(int sig){
-    // free resources
+    kill(-getpid(), SIGTERM);
 
-    kill(-getpid(), SIGUSR1);
+    freeResources();
 
     // terminate
     printf("<server %d> server exits\n", getpid());
@@ -41,7 +56,7 @@ void serverSigHandler(int sig){
     exit(0);
 }
 
-void initDevices(){
+void initDevices(int semid){
     int nchild = 0;
     for(; nchild < NDEVICES; nchild++){
         pid_t pid = fork();
@@ -51,7 +66,7 @@ void initDevices(){
         }
 
         else if(pid == 0){
-            startDevice();
+            startDevice(semid, nchild);
         }
     }
 }
@@ -59,30 +74,30 @@ void initDevices(){
 int main(int argc, char * argv[]) {
     printf("<server %d> created server\n", getpid());
 
-    initDevices();
-
     setServerSignalMask();
 
-    sleep(1);
+    // create semaphores set
+    semid = semget(IPC_PRIVATE, NDEVICES + 1, S_IRUSR | S_IWUSR);
+    if (semid == -1)
+        ErrExit("semget failed");
 
+    // ultimo semaforo è quello di accesso alla board (1 -> bloccato, 0 -> sbloccato)
+    unsigned short semInitVal[] = {0, 0, 0, 0, 1, 1}; 
+    union semun arg;
+    arg.array = semInitVal;
+
+    if (semctl(semid, 0, SETALL, arg) == -1)
+        ErrExit("semctl SETALL failed");
+
+    initDevices(semid);
+    
     while(1){
-        printf("sending signal\n");
-        kill(-getpid(), SIGUSR2);
+        // ogni 2 secondi sblocco la board 
+        semOp(semid, 5, -1); 
         sleep(2);
     }
 
-    /*
-    // spiegazione signal queuing 
-    https://stackoverflow.com/questions/5285414/signal-queuing-in-c
-    https://www.quora.com/Why-cant-signal-handlers-block-i-e-go-to-sleep-in-Linux-Isnt-invoking-a-signal-handler-similar-to-calling-a-function-in-which-sleep-is-allowed
-    */
+    while (wait(NULL) != -1);
 
-    // Free resources if child terminates
-    int status;
-    pid_t endedPid;
-    while((endedPid = wait(&status)) != -1){
-        printf("<server> Ended child with PID %d with status: %d\n", endedPid, WEXITSTATUS(status));
-    }
-
-    return 0;
+    freeResources();
 }

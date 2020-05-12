@@ -8,4 +8,6 @@ Ogni altro segnale non strettamente necessario per l’esecuzione del programma 
 void setServerSignalMask();
 void serverSigHandler(int sig);
 
-void initDevices();
+void initDevices(int semid);
+
+void freeResources();

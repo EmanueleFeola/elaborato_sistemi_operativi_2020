@@ -5,36 +5,40 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#include "semaphore.h"
+
 void setDeviceSignalMask(){
     sigset_t set;
     sigfillset(&set);
-    sigdelset(&set, SIGUSR1);
-    sigdelset(&set, SIGUSR2);
+    sigdelset(&set, SIGTERM);
     sigprocmask(SIG_SETMASK, &set, NULL);
 
-    signal(SIGUSR2, deviceSigHandler);
-    signal(SIGUSR1, deviceSigHandler);
+    signal(SIGTERM, deviceSigHandler);
 }
 
 void deviceSigHandler(int sig){
-    if(sig == SIGUSR1){
-        // free devices resources
-
-        // terminate
-        printf("<device %d> terminating\n", getpid());
-
-        exit(0);
-    }
-    else if(sig == SIGUSR2){
-        printf("<device %d> SIGUSR2 received\n", getpid());
-        pause();
-    }
-
+    printf("<device %d> terminating\n", getpid());
+    exit(0);
 }
 
-void startDevice(){
-    printf("<device %d> created and going to sleep\n", getpid());
+void startDevice(int semid, int nchild){
+    printf("<device %d> created new device \n", getpid());
     
     setDeviceSignalMask();
-    pause();
+    
+    while(1){
+        semOp(semid, (unsigned short)nchild, -1); // aspetto il mio turno
+        semOp(semid, (unsigned short) 5, 0); // aspetto che board vada a 0
+
+        printf("<device %d> è il mio turno\n", getpid());
+        fflush(stdout);
+
+        if (nchild > 0)
+            semOp(semid, (unsigned short)(nchild - 1), 1);
+        else{
+            semOp(semid, (unsigned short) NDEVICES, 1); // blocco la board (1 -> bloccato, 0 -> sbloccato)
+            semOp(semid, (unsigned short) NDEVICES - 1, 1);
+            printf("\n");
+        }
+    }
 }
