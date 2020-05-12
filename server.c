@@ -18,8 +18,6 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 
-pid_t childPids[NDEVICES] = {0};  
-
 void setServerSignalMask(){
     // added SIGINT handler for debug purposes
     sigset_t set;
@@ -35,11 +33,7 @@ void setServerSignalMask(){
 void serverSigHandler(int sig){
     // free resources
 
-    // free children
-    int child = 0;
-    for(; child < NDEVICES; child++){
-        kill(childPids[child], SIGTERM);
-    }
+    kill(-getpid(), SIGUSR1);
 
     // terminate
     printf("<server %d> server exits\n", getpid());
@@ -57,15 +51,25 @@ void initDevices(){
         }
 
         else if(pid == 0){
-            childPids[nchild] = getpid();
             startDevice();
         }
     }
 }
 
 int main(int argc, char * argv[]) {
-    setServerSignalMask();
+    printf("<server %d> created server\n", getpid());
+
     initDevices();
+
+    setServerSignalMask();
+
+    sleep(1);
+
+    while(1){
+        printf("sending signal\n");
+        kill(-getpid(), SIGUSR2);
+        sleep(2);
+    }
 
     // Free resources if child terminates
     int status;

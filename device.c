@@ -8,19 +8,28 @@
 void setDeviceSignalMask(){
     sigset_t set;
     sigfillset(&set);
-    sigdelset(&set, SIGTERM);
+    sigdelset(&set, SIGUSR1);
+    sigdelset(&set, SIGUSR2);
     sigprocmask(SIG_SETMASK, &set, NULL);
 
-    signal(SIGTERM, deviceSigHandler);
+    signal(SIGUSR2, deviceSigHandler);
+    signal(SIGUSR1, deviceSigHandler);
 }
 
 void deviceSigHandler(int sig){
-    // free devices resources
+    if(sig == SIGUSR1){
+        // free devices resources
 
-    // terminate
-    printf("<device %d> terminating\n", getpid());
+        // terminate
+        printf("<device %d> terminating\n", getpid());
 
-    exit(0);
+        exit(0);
+    }
+    else if(sig == SIGUSR2){
+        printf("<device %d> SIGUSR2 received\n", getpid());
+        pause();
+    }
+
 }
 
 void startDevice(){
