@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include "err_exit.h"
+//#include "message_fifo.h"
 #define BUFFER_SZ 100 //100 CARATTERI
 char buffer[BUFFER_SZ + 1];
 #define MAX_READ 100 //100 CARATTERI
@@ -96,6 +97,73 @@ int main (int argc, char *argv[]) {
         } 
 
   sleep(1);
+
+char *path2ServerFIFO = "/tmp/dev_fifo.DevicenumDev";
+
+printf("<Server - Device> Making FIFO...\n");
+if (mkfifo(path2ServerFIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)//IN BASE A DOVE VIENE GENERATA LA FIFO VEDREMO un file
+        errExit("mkfifo failed");
+
+    printf("<Server - Device> FIFO %s created!\n", path2ServerFIFO);
+ //alla fine di questo for mi aspetto, tramite -ls, di vedere le 5 fifo create con i pid dei 5 devices
+
+printf("<Server - Device> waiting for a client...\n");
+serverFIFO = open(path2ServerFIFO, O_RDONLY);
+if (serverFIFO == -1)
+    errExit("open failed");
+
+char messaggio[256];
+int len1 = strlen(messaggio); 
+
+printf("<Server> waiting for message...\n");
+
+int bR = read(serverFIFO, messaggio, len1);
+
+    // Checking the number of bytes from the FIFO
+    if (bR == -1)
+        printf("<Server - Device> it looks like the FIFO is broken/n");
+    if (bR != len1 /*|| bR == 0*/)
+        printf("<Server> it looks like I did not receive the message\n");
+    else
+        printf("<Server> Il tuo messaggio e' %s \n", messaggio);
+    
+
+// Close the FIFO
+if (close(serverFIFO) != 0)
+    errExit("close failed");
+
+printf("<Server> removing FIFO...\n");
+// Remove the FIFO
+if (unlink(path2ServerFIFO) != 0)
+    errExit("unlink failed");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*for(int numDev = 1; numDev <= 5; numDev++)
+  char *path2ServerFIFO = "/tmp/dev_fifo.DevicenumDev";
+*/
 /*
   //int NDEVICES = 5;
   //int bytesPerLine = 4 * 2 * NDEVICES + 1 * NDEVICES + 1 * (NDEVICES-1);
@@ -115,7 +183,7 @@ int main (int argc, char *argv[]) {
   printf("%s \n", buffer);*/
 
 
-  char c[1000];
+  /*char c[1000];
     FILE *fptr;
     if ((fptr = fopen("./input/file_posizioni.txt", "r")) == NULL) {
         printf("Error! opening file");
@@ -128,7 +196,7 @@ int main (int argc, char *argv[]) {
   
     fclose(fptr);
  
-  return 0;
+  return 0;*/
 
 /*int NDEVICES = 5;
 int bytesPerLine = 4 * 2 * NDEVICES + 1 * NDEVICES + 1 * (NDEVICES-1);
