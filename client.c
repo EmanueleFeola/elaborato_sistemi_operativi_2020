@@ -1,5 +1,5 @@
-/// @file server.c
-/// @brief Contiene l'implementazione del SERVER.
+/// @file client.c
+/// @brief Contiene l'implementazione del client.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,205 +16,48 @@
 #include <string.h>
 
 #include "err_exit.h"
+
+#include "defines.h"
 //#include "message_fifo.h"
-#define BUFFER_SZ 100 //100 CARATTERI
-char buffer[BUFFER_SZ + 1];
-#define MAX_READ 100 //100 CARATTERI
-char buffer[MAX_READ + 1];
 
-int main (int argc, char *argv[]) {
+int main(int argc, char * argv[]) {
 
-  //CREO IL FIGLIO "Ack_Manager"
-  pid_t Ack_Manager;
-  Ack_Manager = fork();
-  if (Ack_Manager == -1)
-        printf("Ack_Manager non creato!");
-  if(Ack_Manager == 0) 
-      { 
-        printf("[Ack_Manager] pid %d from [parent] pid %d\n\n", getpid(), getppid()); 
-        exit(0); 
-      }
-
-  sleep(1);
-
-  pid_t Device1;
-  pid_t Device2;
-  pid_t Device3;
-  pid_t Device4;
-  pid_t Device5;
-
-  Device1 = fork();
-      if (Device1 == -1)
-            printf("Device 1 non creato!");
-      if(Device1 == 0) 
-        { 
-          printf("[Device 1] pid %d from [parent] pid %d\n", getpid(), getppid()); 
-          exit(0); 
-        } 
-
-  sleep(1);
-
-  Device2 = fork();
-      if (Device2 == -1)
-            printf("Device 2 non creato!");
-      if(Device2 == 0) 
-        { 
-          printf("[Device 2] pid %d from [parent] pid %d\n", getpid(), getppid()); 
-          exit(0); 
-        } 
-
-  sleep(1);
-
-  Device3 = fork();
-      if (Device3 == -1)
-            printf("Device 3 non creato!");
-      if(Device3 == 0) 
-        { 
-          printf("[Device 3] pid %d from [parent] pid %d\n", getpid(), getppid()); 
-          exit(0); 
-        } 
-
-  sleep(1);
-
-  Device4 = fork();
-      if (Device4 == -1)
-            printf("Device 4 non creato!");
-      if(Device4 == 0) 
-        { 
-          printf("[Device 4] pid %d from [parent] pid %d\n", getpid(), getppid()); 
-          exit(0); 
-        } 
-  
-  sleep(1);
-
-  Device5 = fork();
-      if (Device5 == -1)
-            printf("Device 5 non creato!");
-      if(Device5 == 0) 
-        { 
-          printf("[Device 5] pid %d from [parent] pid %d\n", getpid(), getppid()); 
-          exit(0); 
-        } 
-
-  sleep(1);
-
-char *path2ServerFIFO = "/tmp/dev_fifo.DevicenumDev";
-
-printf("<Server - Device> Making FIFO...\n");
-if (mkfifo(path2ServerFIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)//IN BASE A DOVE VIENE GENERATA LA FIFO VEDREMO un file
-        errExit("mkfifo failed");
-
-    printf("<Server - Device> FIFO %s created!\n", path2ServerFIFO);
- //alla fine di questo for mi aspetto, tramite -ls, di vedere le 5 fifo create con i pid dei 5 devices
-
-printf("<Server - Device> waiting for a client...\n");
-serverFIFO = open(path2ServerFIFO, O_RDONLY);
-if (serverFIFO == -1)
-    errExit("open failed");
-
-char messaggio[256];
-int len1 = strlen(messaggio); 
-
-printf("<Server> waiting for message...\n");
-
-int bR = read(serverFIFO, messaggio, len1);
-
-    // Checking the number of bytes from the FIFO
-    if (bR == -1)
-        printf("<Server - Device> it looks like the FIFO is broken/n");
-    if (bR != len1 /*|| bR == 0*/)
-        printf("<Server> it looks like I did not receive the message\n");
-    else
-        printf("<Server> Il tuo messaggio e' %s \n", messaggio);
-    
-
-// Close the FIFO
-if (close(serverFIFO) != 0)
-    errExit("close failed");
-
-printf("<Server> removing FIFO...\n");
-// Remove the FIFO
-if (unlink(path2ServerFIFO) != 0)
-    errExit("unlink failed");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*for(int numDev = 1; numDev <= 5; numDev++)
-  char *path2ServerFIFO = "/tmp/dev_fifo.DevicenumDev";
-*/
-/*
-  //int NDEVICES = 5;
-  //int bytesPerLine = 4 * 2 * NDEVICES + 1 * NDEVICES + 1 * (NDEVICES-1);
-  int fd_fileposizioni = open("./input/file_posizioni.txt", O_RDONLY);
-  if (fd_fileposizioni == -1) 
-      printf("File %s does not exist\n", argv[0]); 
-
-  // A MAX_READ bytes buffer. 
-  char buffer[MAX_READ + 1];
-  
-  // Reading up to MAX_READ bytes from myfile.    
-  ssize_t numRead = read(fd_fileposizioni, buffer, MAX_READ); 
-  if (numRead == -1) 
-    ErrExit("read");
-
-  buffer[numRead] = '\0';
-  printf("%s \n", buffer);*/
-
-
-  /*char c[1000];
-    FILE *fptr;
-    if ((fptr = fopen("./input/file_posizioni.txt", "r")) == NULL) {
-        printf("Error! opening file");
-        // Program exits if file pointer returns NULL.
-        exit(1);
+   if (argc != 1) {
+        printf("Il nome dell'eseguibile e' sbagliato\n");//DUE PROCESSI, IN QUESTO CASO SCOLLEGATI L'UNO DALL'ALTRO, NON POSSONO CONDIVIDERE IL NOME DI UN file SE NON GLIELO PASSIAMO A MENO CHE NON UTILIZZIAMO LA MEMORIA CONDIVISA.
+        return 0;
     }
-    // reads text until newline is encountered
-    fscanf(fptr, "%[^\n]", c);
-    printf("\n%s\n", c);
-  
-    fclose(fptr);
- 
-  return 0;*/
 
-/*int NDEVICES = 5;
-int bytesPerLine = 4 * 2 * NDEVICES + 1 * NDEVICES + 1 * (NDEVICES-1);
+  //LEGGE IL PATHNAME DELLA FIFO
+  char *path2ServerFIFO = "/tmp/dev_fifo.DevicenumDev";
 
-int fd = open("./input/file_posizioni.txt", O_RDONLY, 0);
-if(fd == -1)
-    printf("errore apertura file\n");
+  printf("<Client - Device> opening FIFO %s...\n", path2ServerFIFO);
 
-char buffer[bytesPerLine + 1];
-int bR = -1; 
+  int serverFIFO = open(path2ServerFIFO, O_WRONLY);
+  if (serverFIFO == -1)
+      errExit("open failed");
 
-while((bR = read(fd, buffer, bytesPerLine + 1) != 0)){
-    printf("%s", buffer);
-    // ogni volta resetto il browser,
-    // se no rimane sporco e si sminchia quando arriva all ultima riga
-    // probabilmente si può fare di meglio
-    memset(buffer,0,sizeof(buffer)); 
-}
 
-printf("\nfinished reading\n");*/
+  /*int rows = 0;  
+  char c;
+  do {  
+      printf("\nCaro utente, inserisci un numero da 1 a 5 (il numero del device a cui vuoi inviare il tuo messaggio):\n ");
+  } while (((scanf("%d%c", &rows, &c)!=2 || c!='\n') && clean_stdin()) || rows<1 || rows>5);//Usare scanf("%d",&rows) invece di scanf("%s",input) ci consente di ottenere direttamente il valore intero da stdin senza la necessità di convertirlo in int. Se l'utente immette una stringa contenente caratteri non numerici è necessario pulire lo stdin prima del successivo scanf("%d",&rows).
+
+ // struct messagefifo MessageFifo;*/
+
+  char messaggio[256];  
+
+  printf("Caro utente, inserisci il tuo messaggio: \n ");
+  scanf("%s ", messaggio);
+
+  int len1 = strlen(messaggio);
+
+  printf("<Client - Device> sending '%s'\n", messaggio);
+
+  if (write(serverFIFO, messaggio, len1) != len1)
+        errExit("write failed");
+
+  // Close the FIFO
+  if (close(serverFIFO) != 0)
+      errExit("close failed");
 }
