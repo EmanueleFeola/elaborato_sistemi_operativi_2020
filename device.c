@@ -52,10 +52,11 @@ void waitP(int semid, int nchild){
  */
 void signalV(int semid, int nchild){
     if (nchild > 0)
-        semOp(semid, (unsigned short)(nchild - 1), 1);
+        semOp(semid, (unsigned short)(nchild - 1), 1); // sblocco il device successivo
     else{
         semOp(semid, (unsigned short) NDEVICES, 1); // blocco la board (1 -> bloccato, 0 -> sbloccato)
-        semOp(semid, (unsigned short) NDEVICES - 1, 1);
+        semOp(semid, (unsigned short) NDEVICES - 1, 1); // sblocco il primo
+        // check per errore accesso board
         printf("\n");
     }
 }
@@ -92,8 +93,8 @@ void startDevice(int semid, int nchild, int shmid){
         // mi sposto sulla cella giusta
         // se la cella prossima è occupata sto fermo (?)
         if(shm_ptr[matrixIndex] == 0){
-            shm_ptr[oldMatrixIndex] = 0;
-            shm_ptr[matrixIndex] = getpid();
+            shm_ptr[oldMatrixIndex] = 0;     // libero precedente
+            shm_ptr[matrixIndex] = getpid(); // occupo nuova
         }
 
         signalV(semid, nchild);

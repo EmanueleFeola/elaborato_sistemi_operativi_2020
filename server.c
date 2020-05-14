@@ -138,7 +138,7 @@ int main(int argc, char * argv[]) {
 
     while(1){
         // ogni 2 secondi sblocco la board
-        semOp(semid, 5, -1); 
+        semOp(semid, NDEVICES, -1); 
         sleep(2);
         printMatrix(iteration);
         iteration++;
