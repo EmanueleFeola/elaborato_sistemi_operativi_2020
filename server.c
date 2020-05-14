@@ -19,15 +19,29 @@
 #include <stdlib.h>
 
 #include <sys/sem.h>
+#include <sys/shm.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
 
 int semid;
+int shmid;
+int *shm_ptr;
 
 void freeResources(){
-    // per adesso c'è solo il semaforo
-    // più avanti ci sarà anche fifo, shm
-
     if (semctl(semid, 0 /*ignored*/, IPC_RMID, NULL) == -1)
-        ErrExit("semctl IPC_RMID failed");
+        ErrExit("<server> semctl IPC_RMID failed");
+
+    if(shmdt(shm_ptr) == -1)
+        ErrExit("<server> shmdt failed\n");
+
+    if(shmctl(shmid, IPC_RMID, NULL) == -1)
+        ErrExit("<server> shmctl failed\n");
 }
 
 void setServerSignalMask(){
@@ -56,7 +70,7 @@ void serverSigHandler(int sig){
     exit(0);
 }
 
-void initDevices(int semid){
+void initDevices(){
     int nchild = 0;
     for(; nchild < NDEVICES; nchild++){
         pid_t pid = fork();
@@ -66,9 +80,30 @@ void initDevices(int semid){
         }
 
         else if(pid == 0){
-            startDevice(semid, nchild);
+            startDevice(semid, nchild, shmid);
         }
     }
+}
+
+void printMatrix(int iteration){
+    int row, col;
+
+    printf("Iteration: %d\n", iteration);
+
+    char divider[8 * COLS]; // 8 è il padding tra celle
+    memset(divider, '-', sizeof(divider));
+
+    printf("%s\n", divider);
+
+    for(row = 0; row < ROWS; row++){
+        for(col = 0; col < COLS; col++){
+            int offset = row*COLS+col;
+            printf("%8d", shm_ptr[offset]);
+        }
+        printf("\n");
+    }
+    
+    printf("%s\n\n", divider);
 }
 
 int main(int argc, char * argv[]) {
@@ -89,12 +124,24 @@ int main(int argc, char * argv[]) {
     if (semctl(semid, 0, SETALL, arg) == -1)
         ErrExit("semctl SETALL failed");
 
-    initDevices(semid);
+    // create board shared memory
+    shmid = shmget(1, sizeof(int) * ROWS * COLS, IPC_CREAT | S_IRUSR | S_IWUSR);
+    if(shmid == -1){
+        ErrExit("shared memory allocation failed\n");
+    }
+
+    shm_ptr = (int *)shmat(shmid, NULL, 0);
+
+    initDevices();
     
+    int iteration = 0;
+
     while(1){
-        // ogni 2 secondi sblocco la board 
+        // ogni 2 secondi sblocco la board
         semOp(semid, 5, -1); 
         sleep(2);
+        printMatrix(iteration);
+        iteration++;
     }
 
     while (wait(NULL) != -1);
