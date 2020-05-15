@@ -16,10 +16,11 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 
 int *shm_ptr;
+char fifoPath[25] = {0};
+int positionFd;
 
 void setDeviceSignalMask(){
     sigset_t set;
@@ -35,6 +36,12 @@ void deviceSigHandler(int sig){
 
     if(shmdt(shm_ptr) == -1)
         ErrExit("<device> shmdt failed\n");
+
+    if(unlink(fifoPath) == -1)
+        ErrExit("<device> unlink fifo failed\n");
+    
+    if(close(positionFd) == -1)
+        ErrExit("<device> closing file failed\n");
 
     exit(0);
 }
@@ -61,29 +68,69 @@ void signalV(int semid, int nchild){
     }
 }
 
+void readFifo(int fd){
+    int bR = -1;
+
+    Message msg;
+
+    do{
+        bR = read(fd, &msg, sizeof(Message));
+        if(bR != 0)
+            printf("<device %d> Read:\n\
+            pid_sender: %d\n\
+            pid_receiver: %d\n\
+            message_id: %d\n\
+            message: |%s|\n\
+            max_distance: %d\n",
+            getpid(), msg.pid_sender, msg.pid_receiver, msg.message_id, msg.message, msg.max_distance);
+
+    } while(bR > 0);
+
+}
+
 void startDevice(int semid, int nchild, int shmid){
     printf("<device %d> created new device \n", getpid());
-    
-    // shm attach
-    shm_ptr = (int *)shmat(shmid, NULL, 0);
-    if(shm_ptr == (void *)-1)
-        ErrExit("shmat failed\n");
-    
-    // open position file
-    int fd = open("./input/file_posizioni.txt", O_RDONLY, 0 /* ignored */);
 
     // signal mask & signal handler
     setDeviceSignalMask();
 
+    // shm attach
+    shm_ptr = (int *)shmat(shmid, NULL, 0);
+    if(shm_ptr == (void *)-1)
+        ErrExit("<device> shmat failed\n");
+
+    // create fifo
+    char *basePath = "/tmp/dev_fifo.";
+    strcat(fifoPath, basePath);
+    
+    char pidbuf[5];
+    sprintf(pidbuf, "%d", getpid());
+    strcat(fifoPath, pidbuf);
+
+    printf("<device %d> Created fifo: %s\n", getpid(), fifoPath);
+
+    int res = mkfifo(fifoPath, S_IRUSR | S_IWUSR);
+    if(res == -1)
+        ErrExit("<device> failed creating fifo\n");
+    int fifoFd = open(fifoPath, O_RDONLY | O_NONBLOCK); // non lo abbiamo usato in classe
+    if(fifoFd == -1)
+        ErrExit("<device> open fifo failed\n");
+
+    // open position file
+    positionFd = open("./input/file_posizioni.txt", O_RDONLY, 0 /* ignored */);
+
+    // board position buffers
     char nextLine[100] = {0};
     nextMove_t nextMove = {0, 0};
 
     while(1){
         waitP(semid, nchild);
 
+        readFifo(fifoFd);
+        
         int oldMatrixIndex = nextMove.row * COLS + nextMove.col;
 
-        fillNextLine(fd, nextLine);
+        fillNextLine(positionFd, nextLine);
         fillNextMove(nextLine, nchild, &nextMove);
 
         // printf("<device %d> my turn --> %d, %d --> ", getpid(), nextMove.row, nextMove.col);
@@ -96,6 +143,17 @@ void startDevice(int semid, int nchild, int shmid){
             shm_ptr[oldMatrixIndex] = 0;     // libero precedente
             shm_ptr[matrixIndex] = getpid(); // occupo nuova
         }
+        else{
+            // se è occupato ripristino i valori precedenti
+            // perchè NON mi sono mosso 
+            // --> devo ripristinare nextMove con i valori precedenti
+            nextMove.row = oldMatrixIndex / COLS;
+            nextMove.col = oldMatrixIndex % COLS;
+            // esempio: se oldMatrixIndex = 8,
+            // allora facendo 8 / COLS = 8 / 5 = 1 con resto 3
+            // mi ricalcolo la row(8/5), col(8%5) precedente
+        }
+
 
         signalV(semid, nchild);
     }

@@ -16,5 +16,13 @@ typedef struct nextMove{
     int col;
 } nextMove_t;
 
+typedef struct {
+    pid_t pid_sender;
+    pid_t pid_receiver;
+    int message_id;
+    char message[256];
+    int max_distance;
+} Message;
+
 void fillNextLine(int fd, char input[]);
 void fillNextMove(char *nextLine, int nchild, nextMove_t *nextMove);

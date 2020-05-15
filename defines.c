@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
-#include <stdlib.h>     /* atoi */
+#include <stdlib.h>
 
 void fillNextLine(int fd, char input[]){
     char row[50] = {0};   // contiene la riga successiva
@@ -27,36 +27,32 @@ void fillNextLine(int fd, char input[]){
 
 // 0,0|1,0|2,0|0,1|1,0
 void fillNextMove(char *nextLine, int nchild, nextMove_t *nextMove){
-    int counter = 0;
-    // printf("fillNextMove (%d): %s --> ", nchild, nextLine);
+    int pipeCounter;
 
-    // dopo nchild barre verticali
-    for(; *nextLine != '\0' && counter < nchild; ){
+    for(pipeCounter = 0; *nextLine != '\0' && pipeCounter < nchild; nextLine++)
         if(*nextLine == '|')
-            counter++;
-    
-        nextLine++;
-    }
+            pipeCounter++;
 
     // printf("%s\n", nextLine);
 
     // fino alla virgola --> row
-    // dalla virgola alla | --> col
-
-    char str[strlen(nextLine)]; // al massimo la riga è lunga strlen(nextLine)
+    char buffer[strlen(nextLine)]; // al massimo la riga è lunga strlen(nextLine)
     int index;
     
     for(index = 0; *nextLine != ','; nextLine++, index++)
-        str[index] = *(nextLine);
+        buffer[index] = *(nextLine);
     
-    nextMove->row = atoi(str);
+    nextMove->row = atoi(buffer);
 
-    nextLine++; // skippa la virgola
+    // skippa la virgola
+    nextLine++; 
 
-    memset(str, 0, sizeof(str)); // reset stringa (altrimenti ottengo valore sporco in col)
+    // reset stringa (altrimenti ottengo valore sporco in col)
+    memset(buffer, 0, sizeof(buffer));     
     
+    // dalla virgola alla | --> col
     for(index = 0; *nextLine != '\0' && *nextLine != '|'; nextLine++, index++)
-        str[index] = *(nextLine);
+        buffer[index] = *(nextLine);
     
-    nextMove->col = atoi(str);
+    nextMove->col = atoi(buffer);
 }

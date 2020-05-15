@@ -1,58 +1,46 @@
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <errno.h>
-#include <stdio.h>
 #include <unistd.h>
-#include <string.h>
+#include <stdlib.h>
 
-void getLine(int index, int fd, char input[]){
+void startClient(char *filename);
 
-    lseek(fd, 0, SEEK_SET);
-
-    int rowCounter = 0;
-
-    char row[100] = {0};
-    char buffer[10] = {0};
-
-    int counter = 0;
-
-    while(read(fd, buffer, 1) != 0){
-        
-        if(strcmp(buffer, "\n") != 0)
-            strcat(row, buffer);
-        
-        else{
-            rowCounter++;
-
-            if(rowCounter > index)
-                break;
-
-            memset(row, 0, sizeof(row)); 
-        }
-    }
-
-    memcpy(input, row, strlen(row)+1);
-}
+/*
+Estendere Ese_1 affinche’ il server continui a leggere messaggi dalla FIFO creata.
+Il server rimuove la FIFO ed infine termina solo quando i due numeri ricevuti sono uguali, o dall’ultimo messaggio ricevuto sono
+passati piu’ di 30 secondi.
+*/
 
 int main(){
-    int fd = open("./input/file_posizioni.txt", O_RDONLY, 0 /* ignored */);
-    if(fd == -1)
-        printf("errore apertura file\n");
+    startClient("emptyFile.txt");
+}
 
-    char row[100] = {0}; 
+void startClient(char *filename){
+    int fd = open(filename, O_WRONLY);
 
+    printf("<Client> Opened FIFO\n");
 
-    int counter = 0;
+    int buffer[] = {0, 0};
+    int wBytes;
 
-//    while(counter < 5){
-        getLine(0, fd, row);
-        printf("%s\n", row);
-        counter++;
-//    }
+    do{
+        printf("<Client> Inserisci due numeri: \n");
+        scanf("%d %d", &buffer[0], &buffer[1]);
 
-        getLine(1, fd, row);
-        printf("%s\n", row);
+        wBytes = write(fd, buffer, sizeof(int) * 2);
 
-    return 0;
+        if(wBytes < 0)
+            printf("<Client> - FIFO has been closed by server\n");
+        else{
+            printf("<Client> - Sending: %d %d\n", buffer[0], buffer[1]);
+        }
+    }while(wBytes > 0);
+
+    printf("<Client> - Closing my side\n");
+
+    close(fd);
+    unlink(filename);
+    exit(0);
 }

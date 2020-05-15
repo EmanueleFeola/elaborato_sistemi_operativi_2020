@@ -1,6 +1,7 @@
 /// @file server.c
 /// @brief Contiene l'implementazione del SERVER.
 
+#include <sys/types.h>
 #include "err_exit.h"
 #include "defines.h"
 #include "shared_memory.h"
@@ -21,7 +22,6 @@
 #include <sys/sem.h>
 #include <sys/shm.h>
 
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -125,7 +125,7 @@ int main(int argc, char * argv[]) {
         ErrExit("semctl SETALL failed");
 
     // create board shared memory
-    shmid = shmget(1, sizeof(int) * ROWS * COLS, IPC_CREAT | S_IRUSR | S_IWUSR);
+    shmid = shmget(IPC_PRIVATE, sizeof(int) * ROWS * COLS, IPC_CREAT | S_IRUSR | S_IWUSR);
     if(shmid == -1){
         ErrExit("shared memory allocation failed\n");
     }
@@ -139,7 +139,7 @@ int main(int argc, char * argv[]) {
     while(1){
         // ogni 2 secondi sblocco la board
         semOp(semid, NDEVICES, -1); 
-        sleep(2);
+        sleep(1);
         printMatrix(iteration);
         iteration++;
     }
