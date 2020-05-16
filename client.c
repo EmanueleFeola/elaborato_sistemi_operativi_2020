@@ -19,8 +19,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SCRIPT_INPUT
-
 int main(int argc, char * argv[]) {
     // ./client pid_receiver message_id message max_distance
 
@@ -32,8 +30,7 @@ int main(int argc, char * argv[]) {
     char fname[50] = {0};
     strcat(fname, fifoBasePath);
 
-
-    #ifdef SCRIPT_INPUT
+    if(argc > 1){
         if(argc != 5){
             // perchè non va la errExit dc
             printf("<client> ./client takes 4 parameters: ./client pid_receiver message_id message max_distance\n");
@@ -49,22 +46,35 @@ int main(int argc, char * argv[]) {
         
         msg.max_distance = atoi(argv[4]);
 
-    #else
-        char pidString[7] = {0};
-        printf("<client %d> Insert destination PID:\n", getpid());
-        scanf("%s", pidString);
-        strcat(fname, pidString);
-        msg.pid_receiver = atoi(pidString);
-
-        printf("<client %d> Insert message id: \n", getpid());
-        scanf("%d", msg.message_id);
-
+        if(msg.pid_receiver < 1 || msg.message_id < 0 || msg.max_distance < 1){
+            printf("<client %d> script input < 0\n", getpid());
+            exit(1);
+        }
+    }
+    else{
+        // se scambio l ordine della scanf di message e una delle altre scanf non funzia.....dc
+        // TODO: risolvere ...
         printf("<client %d> Insert message: \n", getpid());
-        scanf("%s", msg.message);
+        scanf("%[^\n]%*c", msg.message);
 
-        printf("<client %d> Insert max distance: \n", getpid());
-        scanf("%d", msg.max_distance);
-    #endif
+        do{
+            char pidString[7] = {0};
+            printf("<client %d> Insert destination PID:\n", getpid());
+            scanf("%s", pidString);
+            strcat(fname, pidString);
+            msg.pid_receiver = atoi(pidString);
+        } while(msg.pid_receiver < 1);
+
+        do{
+            printf("<client %d> Insert message id: \n", getpid());
+            scanf("%d", &msg.message_id);
+        } while(msg.message_id < 0);
+
+        do{
+            printf("<client %d> Insert max distance: \n", getpid());
+            scanf("%d", &msg.max_distance);
+        } while(msg.max_distance < 1);
+    }
 
     printf("<client> Created message:\n\
     pid_sender: %d\n\

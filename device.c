@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define MAX_NMESSAGES 3
+
 int *shm_ptr;
 char fifoPath[25] = {0};
 int positionFd;
@@ -68,14 +70,39 @@ void signalV(int semid, int nchild){
     }
 }
 
-void readFifo(int fd){
+void shift(Message messages[], Message msg, int *nMessages){
+    // shifta tutti i device a destra di 1
+    int msgIndex;
+    for(msgIndex = *nMessages - 1; msgIndex > 0; msgIndex--)
+        messages[msgIndex] = messages[msgIndex - 1];
+
+    if(*nMessages == MAX_NMESSAGES){
+        printf("Oldest message has been eliminated\n"); 
+        // TODO:
+        // notificare al client che non è stato possibile inviare a tutti i device il messaggio
+        (*nMessages)--;
+    }
+
+    messages[0] = msg;
+    (*nMessages)++;
+
+    printf("<device %d> %d message(s) still to send. ID(s): \n", getpid(), *nMessages); 
+    for(msgIndex = 0; msgIndex < *nMessages; msgIndex++)
+        printf("%d ", messages[msgIndex].message_id);
+
+    printf("\n");
+    fflush(stdout);
+         
+}
+
+void readFifo(int fd, Message messages[], int *nMessages){
     int bR = -1;
 
     Message msg;
 
     do{
         bR = read(fd, &msg, sizeof(Message));
-        if(bR != 0)
+        if(bR != 0){
             printf("<device %d> Read:\n\
             pid_sender: %d\n\
             pid_receiver: %d\n\
@@ -84,11 +111,15 @@ void readFifo(int fd){
             max_distance: %d\n",
             getpid(), msg.pid_sender, msg.pid_receiver, msg.message_id, msg.message, msg.max_distance);
 
-    } while(bR > 0);
+            shift(messages, msg, nMessages);
+        }
 
+    } while(bR > 0);
 }
 
 void startDevice(int semid, int nchild, int shmid){
+    // TODO: eliminare magic numbers!
+
     printf("<device %d> created new device \n", getpid());
 
     // signal mask & signal handler
@@ -107,14 +138,18 @@ void startDevice(int semid, int nchild, int shmid){
     sprintf(pidbuf, "%d", getpid());
     strcat(fifoPath, pidbuf);
 
-    printf("<device %d> Created fifo: %s\n", getpid(), fifoPath);
-
     int res = mkfifo(fifoPath, S_IRUSR | S_IWUSR);
     if(res == -1)
         ErrExit("<device> failed creating fifo\n");
     int fifoFd = open(fifoPath, O_RDONLY | O_NONBLOCK); // non lo abbiamo usato in classe
     if(fifoFd == -1)
         ErrExit("<device> open fifo failed\n");
+
+    printf("<device %d> Created fifo: %s\n", getpid(), fifoPath);
+    
+    // list of messages to send
+    Message messagesToSend[MAX_NMESSAGES]; // al massimo può contenere MAX_NMESSAGES messaggi alla volta!
+    int nMessages = 0;                     // mi conta quanti messaggi ci sono nell array
 
     // open position file
     positionFd = open("./input/file_posizioni.txt", O_RDONLY, 0 /* ignored */);
@@ -126,7 +161,7 @@ void startDevice(int semid, int nchild, int shmid){
     while(1){
         waitP(semid, nchild);
 
-        readFifo(fifoFd);
+        readFifo(fifoFd, messagesToSend, &nMessages);
         
         int oldMatrixIndex = nextMove.row * COLS + nextMove.col;
 

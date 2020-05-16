@@ -1,10 +1,12 @@
 #!/bin/bash
 
+# TODO: readme
+
 :'
 - SCRIPT USAGE:
 -- source client_hub times_to_send pid_receiver message_id message max_distance
 - NB: se il messaggio inserito ha spazi in mezzo, mettere " all inizio e alla fine
--- e.g: client_hub.sh 1 2 3 "messaggio con spazi" 4
+-- e.g: source client_hub.sh 1 2 3 "messaggio con spazi" 4
 Al messaggio inviato allo script client viene aggiunto l indice del for per differenziare i messaggi se times_to_send > 1
 '
 
