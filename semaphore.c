@@ -26,3 +26,24 @@ int create_sem_set(key_t semkey, int nsem, unsigned short *values) {
 
     return semid;
 }
+
+/*
+ * wait until it is my turn and board is available 
+ */
+void waitP(int semid, int nchild){
+    semOp(semid, (unsigned short)nchild, -1); // aspetto il mio turno
+    semOp(semid, (unsigned short) 5, 0); // aspetto che board vada a 0
+}
+
+/*
+ * signal to other devices that I completed my tasks
+ */
+void signalV(int semid, int nchild){
+    if (nchild > 0)
+        semOp(semid, (unsigned short)(nchild - 1), 1); // sblocco il device successivo
+    else{
+        semOp(semid, (unsigned short) NDEVICES, 1); // blocco la board (1 -> bloccato, 0 -> sbloccato)
+        semOp(semid, (unsigned short) NDEVICES - 1, 1); // sblocco il primo
+        printf("\n");
+    }
+}

@@ -5,7 +5,7 @@ del processo ack_manager e la chiusura di tutti i meccanismi di comunicazione/si
 Ogni altro segnale non strettamente necessario per l’esecuzione del programma deve essere bloccato.
 */
 
-void setServerSignalMask();
+void setServerSigMask();
 void serverSigHandler(int sig);
 
 void initDevices();

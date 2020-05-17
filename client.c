@@ -1,43 +1,26 @@
 /// @file client.c
 /// @brief Contiene l'implementazione del client.
 
-#include <signal.h> 
-#include <stdio.h> 
-#include <unistd.h>
-#include <stdlib.h>
-
-#include <sys/shm.h>
-
-#include "semaphore.h"
+#include <sys/stat.h>
 #include "defines.h"
 #include "err_exit.h"
+#include "fifo.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
-
+// ./client pid_receiver message_id message max_distance
 int main(int argc, char * argv[]) {
-    // ./client pid_receiver message_id message max_distance
-
     Message msg;
     msg.pid_sender = getpid();
 
     // fifo path
-    char *fifoBasePath = "/tmp/dev_fifo.";
-    char fname[50] = {0};
-    strcat(fname, fifoBasePath);
+    char fifoBasePath[20] = "/tmp/dev_fifo.";
+    char fifoPath[50] = {0};
+    sprintf(fifoPath, "%s", fifoBasePath);
 
     if(argc > 1){
-        if(argc != 5){
-            // perchè non va la errExit dc
-            printf("<client> ./client takes 4 parameters: ./client pid_receiver message_id message max_distance\n");
-            exit(1);
-        }
-
-        strcat(fname, argv[1]);
+        if(argc != 5)
+            ErrExit("<client> ./client takes 4 parameters: ./client pid_receiver message_id message max_distance");
+            
+        strcat(fifoPath, argv[1]);
         msg.pid_receiver = atoi(argv[1]);
         msg.message_id = atoi(argv[2]);
 
@@ -59,9 +42,9 @@ int main(int argc, char * argv[]) {
 
         do{
             char pidString[7] = {0};
-            printf("<client %d> Insert destination PID:\n", getpid());
+            printf("<client> Insert destination PID:\n");
             scanf("%s", pidString);
-            strcat(fname, pidString);
+            sprintf(fifoPath, "%s%s", fifoPath, pidString);
             msg.pid_receiver = atoi(pidString);
         } while(msg.pid_receiver < 1);
 
@@ -76,22 +59,18 @@ int main(int argc, char * argv[]) {
         } while(msg.max_distance < 1);
     }
 
-    printf("<client> Created message:\n\
+    printf("<client %d> Created message:\n\
     pid_sender: %d\n\
     pid_receiver: %d\n\
     message_id: %d\n\
     message: |%s|\n\
     max_distance: %d\n",
-    msg.pid_sender, msg.pid_receiver, msg.message_id, msg.message, msg.max_distance);
+    getpid(), msg.pid_sender, msg.pid_receiver, msg.message_id, msg.message, msg.max_distance);
     
-    printf("<client> Sending to fifo: %s\n", fname);
+    printf("<client> Sending to fifo: %s\n", fifoPath);
 
-    int fd = open(fname, O_WRONLY);
-    if(fd == -1)
-        printf("<client %d> failed to open fifo\n", getpid());
-
-    write(fd, &msg, sizeof(msg));
-    close(fd);
+    int fd = get_fifo(fifoPath, O_WRONLY);
+    write_fifo(fd, msg);
 
     return 0;
 }

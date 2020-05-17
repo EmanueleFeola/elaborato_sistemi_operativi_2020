@@ -1,7 +1,6 @@
 /// @file server.c
 /// @brief Contiene l'implementazione del SERVER.
 
-#include <sys/types.h>
 #include "err_exit.h"
 #include "defines.h"
 #include "shared_memory.h"
@@ -11,40 +10,33 @@
 #include "server.h"
 #include "device.h"
 
-// signals imports
 #include <signal.h> 
-#include <stdio.h> 
-#include <unistd.h>
-
 #include <sys/wait.h>
-#include <stdlib.h>
-
 #include <sys/sem.h>
 #include <sys/shm.h>
-
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <errno.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
 
 int semid;
-int shmid;
-int *shm_ptr;
+int board_shmid;
+int *board_ptr;
+int acklist_shmid;
 
 void freeResources(){
     if (semctl(semid, 0 /*ignored*/, IPC_RMID, NULL) == -1)
         ErrExit("<server> semctl IPC_RMID failed");
 
-    if(shmdt(shm_ptr) == -1)
+    if(shmdt(board_ptr) == -1)
         ErrExit("<server> shmdt failed\n");
 
-    if(shmctl(shmid, IPC_RMID, NULL) == -1)
+    if(shmctl(board_shmid, IPC_RMID, NULL) == -1)
+        ErrExit("<server> shmctl failed\n");
+
+    if(shmctl(acklist_shmid, IPC_RMID, NULL) == -1)
         ErrExit("<server> shmctl failed\n");
 }
 
-void setServerSignalMask(){
+void setServerSigMask(){
     // added SIGINT handler for debug purposes
     sigset_t set;
     sigfillset(&set);
@@ -80,57 +72,27 @@ void initDevices(){
         }
 
         else if(pid == 0){
-            startDevice(semid, nchild, shmid);
+            startDevice(semid, nchild, board_shmid, acklist_shmid);
         }
     }
-}
-
-void printMatrix(int iteration){
-    int row, col;
-
-    printf("Iteration: %d\n", iteration);
-
-    char divider[8 * COLS]; // 8 è il padding tra celle
-    memset(divider, '-', sizeof(divider));
-
-    printf("%s\n", divider);
-
-    for(row = 0; row < ROWS; row++){
-        for(col = 0; col < COLS; col++){
-            int offset = row*COLS+col;
-            printf("%8d", shm_ptr[offset]);
-        }
-        printf("\n");
-    }
-    
-    printf("%s\n\n", divider);
 }
 
 int main(int argc, char * argv[]) {
     printf("<server %d> created server\n", getpid());
 
-    setServerSignalMask();
+    // set signal mask & handler
+    setServerSigMask();
 
-    // create semaphores set
-    semid = semget(IPC_PRIVATE, NDEVICES + 1, S_IRUSR | S_IWUSR);
-    if (semid == -1)
-        ErrExit("semget failed");
-
-    // ultimo semaforo è quello di accesso alla board (1 -> bloccato, 0 -> sbloccato)
+    // create sem set
     unsigned short semInitVal[] = {0, 0, 0, 0, 1, 1}; 
-    union semun arg;
-    arg.array = semInitVal;
-
-    if (semctl(semid, 0, SETALL, arg) == -1)
-        ErrExit("semctl SETALL failed");
-
+    semid = create_sem_set(IPC_PRIVATE, NDEVICES + 1, semInitVal);
+    
     // create board shared memory
-    shmid = shmget(IPC_PRIVATE, sizeof(int) * ROWS * COLS, IPC_CREAT | S_IRUSR | S_IWUSR);
-    if(shmid == -1){
-        ErrExit("shared memory allocation failed\n");
-    }
+    board_shmid = alloc_shared_memory(IPC_PRIVATE, sizeof(int) * ROWS * COLS);
+    board_ptr = get_shared_memory(board_shmid, 0); 
 
-    shm_ptr = (int *)shmat(shmid, NULL, 0);
+    // create ack list shared memory
+    acklist_shmid = alloc_shared_memory(IPC_PRIVATE, sizeof(Message) * 100);
 
     initDevices();
     
@@ -138,10 +100,10 @@ int main(int argc, char * argv[]) {
 
     while(1){
         // ogni 2 secondi sblocco la board
-        semOp(semid, NDEVICES, -1); 
-        sleep(1);
-        printMatrix(iteration);
+        sleep(2);
+        printMatrix(board_ptr, iteration);
         iteration++;
+        semOp(semid, NDEVICES, -1); 
     }
 
     while (wait(NULL) != -1);
