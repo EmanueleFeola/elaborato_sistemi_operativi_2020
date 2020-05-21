@@ -14,11 +14,11 @@
 
 double CalculateDistance(int row1, int col1, int row2, int col2){
     //double diffx = x1 - x2;
-    double diffx = row2 - row1;
-    double diffy = y1 - y2;
-    double diffx_sqr = diffx * diffx;
-    double diffy_sqr = diffy * diffy;
-    double distance = sqrt (diffx_sqr + diffy_sqr);
+    double diffrow = row2 - row1;
+    double diffcol = col2 - col1;
+    double diffrow_sqr = diffrow * diffrow;
+    double diffcol_sqr = diffcol * diffcol;
+    double distance = sqrt (diffrow_sqr + diffcol_sqr);
 
 return distance;
 }
@@ -37,7 +37,6 @@ void fillNextLine(int fd, char input[]){//char input[] --> gli passo un puntator
     //} else{
         memcpy(input, row, strlen(row)+1);
     } 
-}
 
 // 0,0|1,0|2,0|0,1|1,0
 void fillNextMove(char *nextLine, int nchild, nextMove_t *nextMove){
