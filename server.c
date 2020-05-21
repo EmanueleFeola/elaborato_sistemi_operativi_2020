@@ -1,220 +1,150 @@
 /// @file server.c
 /// @brief Contiene l'implementazione del SERVER.
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
-
 #include <sys/types.h>
+#include "err_exit.h"
+#include "defines.h"
+#include "shared_memory.h"
+#include "semaphore.h"
+#include "fifo.h"
+
+#include "server.h"
+#include "device.h"
+
+// signals imports
+#include <signal.h> 
+#include <stdio.h> 
 #include <unistd.h>
+
 #include <sys/wait.h>
+#include <stdlib.h>
+
+#include <sys/sem.h>
+#include <sys/shm.h>
+
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 
-#include "err_exit.h"
-//#include "message_fifo.h"
-#define BUFFER_SZ 100 //100 CARATTERI
-char buffer[BUFFER_SZ + 1];
-#define MAX_READ 100 //100 CARATTERI
-char buffer[MAX_READ + 1];
+int semid;
+int shmid;
+int *shm_ptr;
 
-int main (int argc, char *argv[]) {
+void freeResources(){
+    if (semctl(semid, 0 /*ignored*/, IPC_RMID, NULL) == -1)
+        ErrExit("<server> semctl IPC_RMID failed");
 
-  //CREO IL FIGLIO "Ack_Manager"
-  pid_t Ack_Manager;
-  Ack_Manager = fork();
-  if (Ack_Manager == -1)
-        printf("Ack_Manager non creato!");
-  if(Ack_Manager == 0) 
-      { 
-        printf("[Ack_Manager] pid %d from [parent] pid %d\n\n", getpid(), getppid()); 
-        exit(0); 
-      }
+    if(shmdt(shm_ptr) == -1)
+        ErrExit("<server> shmdt failed\n");
 
-  sleep(1);
-
-  pid_t Device1;
-  pid_t Device2;
-  pid_t Device3;
-  pid_t Device4;
-  pid_t Device5;
-
-  Device1 = fork();
-      if (Device1 == -1)
-            printf("Device 1 non creato!");
-      if(Device1 == 0) 
-        { 
-          printf("[Device 1] pid %d from [parent] pid %d\n", getpid(), getppid()); 
-          exit(0); 
-        } 
-
-  sleep(1);
-
-  Device2 = fork();
-      if (Device2 == -1)
-            printf("Device 2 non creato!");
-      if(Device2 == 0) 
-        { 
-          printf("[Device 2] pid %d from [parent] pid %d\n", getpid(), getppid()); 
-          exit(0); 
-        } 
-
-  sleep(1);
-
-  Device3 = fork();
-      if (Device3 == -1)
-            printf("Device 3 non creato!");
-      if(Device3 == 0) 
-        { 
-          printf("[Device 3] pid %d from [parent] pid %d\n", getpid(), getppid()); 
-          exit(0); 
-        } 
-
-  sleep(1);
-
-  Device4 = fork();
-      if (Device4 == -1)
-            printf("Device 4 non creato!");
-      if(Device4 == 0) 
-        { 
-          printf("[Device 4] pid %d from [parent] pid %d\n", getpid(), getppid()); 
-          exit(0); 
-        } 
-  
-  sleep(1);
-
-  Device5 = fork();
-      if (Device5 == -1)
-            printf("Device 5 non creato!");
-      if(Device5 == 0) 
-        { 
-          printf("[Device 5] pid %d from [parent] pid %d\n", getpid(), getppid()); 
-          exit(0); 
-        } 
-
-  sleep(1);
-
-char *path2ServerFIFO = "/tmp/dev_fifo.DevicenumDev";
-
-printf("<Server - Device> Making FIFO...\n");
-if (mkfifo(path2ServerFIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)//IN BASE A DOVE VIENE GENERATA LA FIFO VEDREMO un file
-        errExit("mkfifo failed");
-
-    printf("<Server - Device> FIFO %s created!\n", path2ServerFIFO);
- //alla fine di questo for mi aspetto, tramite -ls, di vedere le 5 fifo create con i pid dei 5 devices
-
-printf("<Server - Device> waiting for a client...\n");
-serverFIFO = open(path2ServerFIFO, O_RDONLY);
-if (serverFIFO == -1)
-    errExit("open failed");
-
-char messaggio[256];
-int len1 = strlen(messaggio); 
-
-printf("<Server> waiting for message...\n");
-
-int bR = read(serverFIFO, messaggio, len1);
-
-    // Checking the number of bytes from the FIFO
-    if (bR == -1)
-        printf("<Server - Device> it looks like the FIFO is broken/n");
-    if (bR != len1 /*|| bR == 0*/)
-        printf("<Server> it looks like I did not receive the message\n");
-    else
-        printf("<Server> Il tuo messaggio e' %s \n", messaggio);
-    
-
-// Close the FIFO
-if (close(serverFIFO) != 0)
-    errExit("close failed");
-
-printf("<Server> removing FIFO...\n");
-// Remove the FIFO
-if (unlink(path2ServerFIFO) != 0)
-    errExit("unlink failed");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*for(int numDev = 1; numDev <= 5; numDev++)
-  char *path2ServerFIFO = "/tmp/dev_fifo.DevicenumDev";
-*/
-/*
-  //int NDEVICES = 5;
-  //int bytesPerLine = 4 * 2 * NDEVICES + 1 * NDEVICES + 1 * (NDEVICES-1);
-  int fd_fileposizioni = open("./input/file_posizioni.txt", O_RDONLY);
-  if (fd_fileposizioni == -1) 
-      printf("File %s does not exist\n", argv[0]); 
-
-  // A MAX_READ bytes buffer. 
-  char buffer[MAX_READ + 1];
-  
-  // Reading up to MAX_READ bytes from myfile.    
-  ssize_t numRead = read(fd_fileposizioni, buffer, MAX_READ); 
-  if (numRead == -1) 
-    ErrExit("read");
-
-  buffer[numRead] = '\0';
-  printf("%s \n", buffer);*/
-
-
-  /*char c[1000];
-    FILE *fptr;
-    if ((fptr = fopen("./input/file_posizioni.txt", "r")) == NULL) {
-        printf("Error! opening file");
-        // Program exits if file pointer returns NULL.
-        exit(1);
-    }
-    // reads text until newline is encountered
-    fscanf(fptr, "%[^\n]", c);
-    printf("\n%s\n", c);
-  
-    fclose(fptr);
- 
-  return 0;*/
-
-/*int NDEVICES = 5;
-int bytesPerLine = 4 * 2 * NDEVICES + 1 * NDEVICES + 1 * (NDEVICES-1);
-
-int fd = open("./input/file_posizioni.txt", O_RDONLY, 0);
-if(fd == -1)
-    printf("errore apertura file\n");
-
-char buffer[bytesPerLine + 1];
-int bR = -1; 
-
-while((bR = read(fd, buffer, bytesPerLine + 1) != 0)){
-    printf("%s", buffer);
-    // ogni volta resetto il browser,
-    // se no rimane sporco e si sminchia quando arriva all ultima riga
-    // probabilmente si può fare di meglio
-    memset(buffer,0,sizeof(buffer)); 
+    if(shmctl(shmid, IPC_RMID, NULL) == -1)
+        ErrExit("<server> shmctl failed\n");
 }
 
-printf("\nfinished reading\n");*/
+void setServerSignalMask(){
+    // added SIGINT handler for debug purposes
+    sigset_t set;
+    sigfillset(&set);
+    sigdelset(&set, SIGINT);
+    sigdelset(&set, SIGTERM);
+    sigprocmask(SIG_SETMASK, &set, NULL);
+
+    signal(SIGINT, serverSigHandler); //questi li ho creati perche' mi serviranno in futuro
+    signal(SIGTERM, serverSigHandler);//questi li ho creati perche' mi serviranno in futuro
+}
+
+/*
+ * Free resources and children on SIGTERM / SIGINT (debug purposes only)
+ */
+void serverSigHandler(int sig){
+    kill(-getpid(), SIGTERM);//manda un kill a tutti i figli (-getpid vuol dire di mandare il kill a tutti i processi dello stesso gruppo)
+
+    freeResources();
+
+    // terminate
+    printf("<server %d> server exits\n", getpid());
+
+    exit(0);
+}
+
+void initDevices(){
+    int nchild = 0;
+    for(; nchild < NDEVICES; nchild++){//creo i figli dallo 0 al 4
+        pid_t pid = fork();
+
+        if (pid == -1){
+            printf("<server> child %d not created\n", nchild);
+        }
+
+        else if(pid == 0){
+            startDevice(semid, nchild, shmid);// alla "startDevice" passo il set di semafori che e' uguale per tutti i device, nchild che all'inizio e' 0 alla prima esecuzione del for fino ad arrivare a 4 ossia il 5 figlio/device (sto dicendo al device quale figlio e' in modo tale da avere una "coscienza propria")e la shared memory.
+        }
+    }
+}
+
+void printMatrix(int iteration){
+    int row, col;
+
+    printf("Iteration: %d\n", iteration);
+
+    char divider[8 * COLS]; // 8 è il padding tra celle
+    memset(divider, '-', sizeof(divider));
+
+    printf("%s\n", divider);
+
+    for(row = 0; row < ROWS; row++){
+        for(col = 0; col < COLS; col++){
+            int offset = row*COLS+col;
+            printf("%8d", shm_ptr[offset]);
+        }
+        printf("\n");
+    }
+    
+    printf("%s\n\n", divider);
+}
+
+int main(int argc, char * argv[]) {
+    printf("<server %d> created server\n", getpid());
+
+    setServerSignalMask();
+
+    // create semaphores set
+    semid = semget(IPC_PRIVATE, NDEVICES + 1, S_IRUSR | S_IWUSR);//5 figli + board per ora, poi manca ack quindi andremo a 7
+    if (semid == -1)
+        ErrExit("semget failed");
+
+    // ultimo semaforo è quello di accesso alla board (1 -> bloccato, 0 -> sbloccato)
+    unsigned short semInitVal[] = {0, 0, 0, 0, 1, 1}; 
+    union semun arg;
+    arg.array = semInitVal;//inizializzo l'array della struttura semun con i valori dei semafori
+
+    if (semctl(semid, 0, SETALL, arg) == -1)//SETALL --> inizializzo tutti i semafori di un set identificato da semid utilizzando i valori forniti dall'array pointer di arg.array (array --> tutti i semafori). Se invece che 0 mettevo 1,2,3,4 non cambiava nulla xk veniva ignorato
+        ErrExit("semctl SETALL failed");
+
+    // create board shared memory
+    shmid = shmget(IPC_PRIVATE, sizeof(int) * ROWS * COLS, IPC_CREAT | S_IRUSR | S_IWUSR);//devo moltiplicare anche per la dimensione in bytes di un intero che e' 4 oltre che 5 * 5 xk senno' mi creerebbe una shared memory di 25 bytes che non e' sufficiente. IPC_PRIVATE --> l'ipc object non e' privato in questo singolo processo ma puo' essere acceduto da altri processi che hanno ereditato (figli --> devices) quell'ipc object dal parent (server). L'IPC_PRIVATE ci garantisce che nessun altro processo non relazionato abbia la stessa chiave. un ipc object creato con IPC_PRIVATE non lo posso condividere con altri processi eseguiti a partire da altri programmi ossia processi che non hanno nessuna relazione tra di loro.
+    if(shmid == -1){
+        ErrExit("shared memory allocation failed\n");
+    }
+
+    shm_ptr = (int *)shmat(shmid, NULL, 0);//nella riga 128 quando noi facciamo "shmget" istanziamo questa shared memory che e' da qualche parte in memoria pero' dobbiamo dirgli di attaccare questo spazio di indirizzamento della shared memory al nostro processo tramite "shmat", quindi noi estendiamo lo spazio di indirizzamento virtuale del nostro processo attaccandogli lo spazio della shared memory xk senno' non possiamo accederci non sapendo dove e'. LA shmat CI RITORNA UN PUNTATORE (int *) IN MODO DA POTER ACCEDERE ALLA ZONA DI MEMORIA CREATA CON shmget
+
+    initDevices();
+    
+    int iteration = 0;
+
+    while(iteration != 9){
+        // ogni 2 secondi sblocco la board
+        semOp(semid, NDEVICES, -1); 
+        sleep(1);
+        printMatrix(iteration);
+        iteration++;
+    }
+
+    //while (wait(NULL) != -1);
+
+    freeResources();
 }
