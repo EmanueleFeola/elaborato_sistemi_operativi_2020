@@ -12,9 +12,9 @@
 
 #define max_distance sqrt(2)   
 
-double CalculateDistance(int nextMove.row, int nextMove.col){
+double CalculateDistance(int row1, int col1, int row2, int col2){
     //double diffx = x1 - x2;
-    double diffx = nextMove;
+    double diffx = row2 - row1;
     double diffy = y1 - y2;
     double diffx_sqr = diffx * diffx;
     double diffy_sqr = diffy * diffy;
@@ -98,9 +98,9 @@ void fillNextMove(char *nextLine, int nchild, nextMove_t *nextMove){
     nextMove->col = atoi(buffer);
 }
 
-void checkEuclideanDistance(int nchild, char *fifoPath, nextMove_t nextMove){
+void checkEuclideanDistance(int nchild, char *fifoPath, nextMove_t *nextMove, nextMove_t *nextMove_nchild){
 
-  double distance1 = CalculateDistance(int nextMove.row, int nextMove.col);   
+  double distance1 = CalculateDistance(nextMove->row,  nextMove->col, nextMove_nchild->row, nextMove_nchild->col);   
 
   printf("Distance\n");  
   printf("%6.1f\n", distance1);   
