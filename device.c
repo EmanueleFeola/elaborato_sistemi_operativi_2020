@@ -122,6 +122,7 @@ void startDevice(int semid, int nchild, int shmid){
     // board position buffers
     char nextLine[100] = {0};//buffer/stringa di 100 caratteri che rappresenta la dimensione della riga successiva (lavoriamo sulle righe singolarmente invece che su tutte insieme). e' come se dessi 100 caratteri ad ogni riga, sono 19 i caratteri, si poteva mettera anche a 19 volendo
     nextMove_t nextMove = {0, 0};// vado a inizializzare i valori row e col della struttura contenuta in device.h a 0
+    nextMove_t nextMove_nchild = {0, 0};
 
     while(1){
         waitP(semid, nchild);
@@ -140,7 +141,8 @@ void startDevice(int semid, int nchild, int shmid){
         //TEORIA !!! --> sarebbe una matrice bidimensionale rappresentata come un array monodimensionale perchè alla fine una matrice è un array di array, quindi in sostanza è un array
          for(; nchild < NDEVICES; nchild++){
             fillNextMove(nextLine, nchild, &nextMove);
-            checkEuclideanDistance(nchild, fifoPath, nextMove);
+            fillNextMove(nextLine, nchild, &nextMove_nchild);
+            checkEuclideanDistance(nchild, fifoPath, &nextMove, &nextMove_nchild);
 
          }
 
