@@ -26,4 +26,4 @@ typedef struct {
 
 void fillNextLine(int fd, char input[]);
 void fillNextMove(char *nextLine, int nchild, nextMove_t *nextMove);
-void checkEuclideanDistance(int nchild, char *fifoPath, nextMove_t nextMove);
+void checkEuclideanDistance(int nchild, char *fifoPath, nextMove_t *nextMove, nextMove_t *nextMove_nchild);
