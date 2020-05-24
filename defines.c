@@ -9,11 +9,9 @@
 #include <stdio.h>
 #include <stdlib.h>     //atoi
 #include <math.h>
-
-#define max_distance sqrt(2)   
+  
 
 double CalculateDistance(int row1, int col1, int row2, int col2){
-    //double diffx = x1 - x2;
     double diffrow = row2 - row1;
     double diffcol = col2 - col1;
     double diffrow_sqr = diffrow * diffrow;
@@ -97,17 +95,17 @@ void fillNextMove(char *nextLine, int nchild, nextMove_t *nextMove){
     nextMove->col = atoi(buffer);
 }
 
-void checkEuclideanDistance(int nchild, char *fifoPath, nextMove_t *nextMove, nextMove_t *nextMove_nchild){
+void checkEuclideanDistance(char *fifoPath, nextMove_t *nextMove, nextMove_t *nextMove_nchild, int max_distance){
 
-  double distance1 = CalculateDistance(nextMove->row,  nextMove->col, nextMove_nchild->row, nextMove_nchild->col);   
+  double distance = CalculateDistance(nextMove->row,  nextMove->col, nextMove_nchild->row, nextMove_nchild->col);   
 
   printf("Distance\n");  
-  printf("%6.1f\n", distance1);   
+  printf("%6.1f\n", distance);      
 
-  printf("\n%4.3f\n\n", max_distance);   
-
-  if(distance1 > max_distance)  
+  if(distance > max_distance)  
     printf("La distanza non permette di scambiare il messaggio!\n");
   else
-    printf("La distanza ci permette di scambiare il messaggio!\n");  
+    printf("La distanza ci permette di scambiare il messaggio!\n"); 
+
+   
 }
