@@ -85,7 +85,6 @@ void readFifo(int fd){
             getpid(), msg.pid_sender, msg.pid_receiver, msg.message_id, msg.message, msg.max_distance);
 
     } while(bR > 0);
-
 }
 
 void startDevice(int semid, int nchild, int shmid){
@@ -139,11 +138,15 @@ void startDevice(int semid, int nchild, int shmid){
         // printf("<device %d> my turn --> %d, %d --> ", getpid(), nextMove.row, nextMove.col);
 
         //TEORIA !!! --> sarebbe una matrice bidimensionale rappresentata come un array monodimensionale perchè alla fine una matrice è un array di array, quindi in sostanza è un array
-         for(; nchild < NDEVICES; nchild++){
-            fillNextMove(nextLine, nchild, &nextMove);
-            fillNextMove(nextLine, nchild, &nextMove_nchild);
-            checkEuclideanDistance(nchild, fifoPath, &nextMove, &nextMove_nchild);
-
+        
+        int nchild_tmp = 0;
+        fillNextMove(nextLine, nchild, &nextMove);
+        for(; nchild_tmp < NDEVICES; nchild_tmp++){
+            if(nchild_tmp != nchild){
+              fillNextMove(nextLine, nchild_tmp, &nextMove_nchild);
+            /*for(message in messages)*/
+              checkEuclideanDistance(fifoPath, &nextMove, &nextMove_nchild, message.max_distance);
+            }
          }
 
         int matrixIndex = nextMove.row * COLS + nextMove.col;//qui effettivamente per quanto riguarda il primo figlio ci troveremo in 0,0 quindi 0 * 5 + 0
