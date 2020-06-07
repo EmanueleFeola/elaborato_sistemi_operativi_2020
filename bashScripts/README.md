@@ -32,4 +32,4 @@ client_hub.sh
 
 ##### Esempio di esecuzione
 
-![image-20200516214321032](/home/emanuele/Documents/so/progetto/elaborato_sistemi_operativi_2020/bashScripts/client.png)
+![image-20200516214321032](client.png)
