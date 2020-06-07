@@ -10,12 +10,12 @@ int getMsgQueue(key_t key, int flags){
     return msqid;
 }
 
-void readMsgQueue(int msqid, ClientMessage msgp, size_t msgsz, long msgtype, int msgflg){
-    if (msgrcv(msqid, &msgp, msgsz, msgtype, msgflg) == -1)
+void readMsgQueue(int msqid, ClientMessage *msgp, size_t msgsz, long msgtype, int msgflg){
+    if (msgrcv(msqid, msgp, msgsz, msgtype, msgflg) == -1)
         ErrExit("msgrcv failed");
 }
 
-void writeMsgQueue(int msqid, const void *msgp, size_t msgsz, int msgflg){
-    if (msgsnd(msqid, &msgp, msgsz, msgflg) == -1)
+void writeMsgQueue(int msqid, ClientMessage *msgp, size_t msgsz, int msgflg){
+    if (msgsnd(msqid, msgp, msgsz, msgflg) == -1)
         ErrExit("msgsnd failed");
 }

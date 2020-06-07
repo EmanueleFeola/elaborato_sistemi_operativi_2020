@@ -13,10 +13,10 @@ void freeResources(){
         ErrExit("<server> shmdt failed\n");
 
     if(shmctl(board_shmid, IPC_RMID, NULL) == -1)
-        ErrExit("<server> shmctl failed\n");
+        ErrExit("<server> shmctl failed (board)\n");
 
     if(shmctl(acklist_shmid, IPC_RMID, NULL) == -1)
-        ErrExit("<server> shmctl failed\n");
+        ErrExit("<server> shmctl failed (acklist)\n");
 }
 
 void setServerSigMask(){
@@ -45,7 +45,7 @@ void serverSigHandler(int sig){
     exit(0);
 }
 
-void initDevices(){
+void initDevices(char *positionFilePath){
     int nchild = 0;
     for(; nchild < NDEVICES; nchild++){
         pid_t pid = fork();
@@ -55,12 +55,12 @@ void initDevices(){
         }
 
         else if(pid == 0){
-            startDevice(semid, nchild, board_shmid, acklist_shmid);
+            startDevice(positionFilePath, semid, nchild, board_shmid, acklist_shmid);
         }
     }
 }
 
-void initAckManager(){
+void initAckManager(int msgQueueKey){
     pid_t pid = fork();
 
     if (pid == -1){
@@ -68,12 +68,22 @@ void initAckManager(){
     }
 
     else if(pid == 0){
-        startAckManager(semid, acklist_shmid, 123); // TODO: key from params, not magic number
+        startAckManager(semid, acklist_shmid, msgQueueKey);
     }
 }
 
 int main(int argc, char * argv[]) {
     printf("<server %d> created server\n", getpid());
+
+    // check params
+    if(argc != 3)
+        ErrExit("<server> incorrect params: server usage is ./server msg_queue file_posizioni");
+
+    int msgQueueKey = atoi(argv[1]);
+    if (msgQueueKey <= 0)
+        ErrExit("<server> incorrect params: msg_queue_key must be greater than zero");
+
+    char *positionFilePath = argv[2];
 
     // set signal mask & handler
     setServerSigMask();
@@ -89,8 +99,8 @@ int main(int argc, char * argv[]) {
     // create ack list shared memory
     acklist_shmid = alloc_shared_memory(IPC_PRIVATE, sizeof(Message) * 100); // TODO: niente magic numbers, #define ack_list_size 100
 
-    initDevices();
-    initAckManager();
+    initDevices(positionFilePath);
+    initAckManager(msgQueueKey);
     
     int iteration = 0;
 
@@ -99,7 +109,8 @@ int main(int argc, char * argv[]) {
         sleep(2);
         iteration++;
         semOp(semid, NDEVICES, -1); 
-        printMatrix(board_ptr, iteration);
+        // printMatrix(board_ptr, iteration);
+        printf("##### step %d: devices positions #####\n", iteration);
     }
 
     while (wait(NULL) != -1);

@@ -5,5 +5,5 @@
 #include "err_exit.h"
 
 int getMsgQueue(key_t key, int flags);
-void readMsgQueue(int msqid, ClientMessage msgp, size_t msgsz, long msgtype, int msgflg);
-void writeMsgQueue(int msqid, const void *msgp, size_t msgsz, int msgflg);
+void readMsgQueue(int msqid, ClientMessage *msgp, size_t msgsz, long msgtype, int msgflg);
+void writeMsgQueue(int msqid, ClientMessage *msgp, size_t msgsz, int msgflg);

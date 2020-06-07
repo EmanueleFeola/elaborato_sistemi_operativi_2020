@@ -41,7 +41,7 @@ void ackManagerRoutine(Acknowledgment *ptr, int msgid){
         ack = &ptr[counter];
 
         if(ack->message_id != 0){ // guardo quelli solo con message_id diverso da 0, ovvero quelli validi
-            printAck(*ack, "ackManager", "read");
+            // printAck(*ack, "ackManager", "read");
 
             int index = contains(found_message_id_list, ack->message_id); // ritorna indice a cui l ha trovato, oppure -1
             // se il message_id corrente è già stato registrato, aggiorno il contatore delle sue occorrenze
@@ -78,14 +78,22 @@ void ackManagerRoutine(Acknowledgment *ptr, int msgid){
                     cm.acks[ackCounter] = *ack; 
                     //ack->message_id = -1; //reset
                     ackCounter++;
-                    // printAck(*ack, "ackManagerRoutine", "read");
+                    // printAck(*ack, "ackManagerRoutine", "loop");
                 }
             }
 
-            // writeMsgQueue(msgid, &cm, mSize, 0);
+            Acknowledgment test;
+            int counter; 
+            for(counter = 0; counter < NDEVICES; counter++){
+                test = cm.acks[counter];
+                printAck(test, "ackManager", "test");
+                // write to file
+            }
+            
+            writeMsgQueue(msgid, &cm, mSize, 0);
 
-            if (msgsnd(msgid, &cm, mSize, 0) == -1)
-                ErrExit("msgsnd failed");
+            // if (msgsnd(msgid, &cm, mSize, 0) == -1)
+            //     ErrExit("msgsnd failed");
         }
     }
 }

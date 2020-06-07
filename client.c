@@ -5,8 +5,16 @@
 #include "utils/print_utils.h"
 #include <sys/stat.h>
 
-// ./client pid_receiver message_id message max_distance
+// ./client msg_queue_key pid_receiver message_id message max_distance
 int main(int argc, char * argv[]) {
+    // check params
+    if(argc != 2 && argc != 6)
+        ErrExit("<client> incorrect params: server usage is\n./client msg_queue\nor\n./client msg_queue_key pid_receiver message_id message max_distance");
+
+    int msgQueueKey = atoi(argv[1]);
+    if (msgQueueKey <= 0)
+        ErrExit("<client> incorrect params: msg_queue_key must be greater than zero");
+
     Message msg;
     msg.pid_sender = getpid();
 
@@ -15,18 +23,15 @@ int main(int argc, char * argv[]) {
     char fifoPath[50] = {0};
     sprintf(fifoPath, "%s", fifoBasePath);
 
-    if(argc > 1){
-        if(argc != 5)
-            ErrExit("<client> ./client takes 4 parameters: ./client pid_receiver message_id message max_distance");
-            
-        strcat(fifoPath, argv[1]);
-        msg.pid_receiver = atoi(argv[1]);
-        msg.message_id = atoi(argv[2]);
+    if(argc > 2){
+        strcat(fifoPath, argv[2]);
+        msg.pid_receiver = atoi(argv[2]);
+        msg.message_id = atoi(argv[3]);
 
-        memcpy(msg.message, argv[3], strlen(argv[3]));
-        msg.message[strlen(argv[3])] = '\0';
+        memcpy(msg.message, argv[4], strlen(argv[4]));
+        msg.message[strlen(argv[4])] = '\0';
         
-        msg.max_distance = atoi(argv[4]);
+        msg.max_distance = atoi(argv[5]);
 
         if(msg.pid_receiver < 1 || msg.message_id < 0 || msg.max_distance < 1){
             printf("<client %d> script input < 0\n", getpid());
@@ -70,24 +75,22 @@ int main(int argc, char * argv[]) {
     ClientMessage cm;
     size_t mSize = sizeof(ClientMessage) - sizeof(long);
 
-    key_t key = 123; // TODO: get from argv
-    int msqid = getMsgQueue(key, IPC_EXCL | S_IRUSR | S_IWUSR);
+    int msqid = getMsgQueue(msgQueueKey, IPC_EXCL | S_IRUSR | S_IWUSR);
     
     printf("<client %d> Waiting for akc of type %d\n", getpid(), msg.message_id);
     
-    readMsgQueue(msqid, cm, mSize, msg.message_id, 0);
-    // quarto parametro message_id --> filtro i messaggi per id
+    readMsgQueue(msqid, &cm, mSize, msg.message_id, 0);
+    // quarto parametro message_id --> filtro gli ack per id
         
-    printf("<client %d> ClientMessage received:\n---start---", getpid());
+    printf("<client %d> ClientMessage received:\n", getpid());
     
     Acknowledgment a;
     int counter; 
     for(counter = 0; counter < NDEVICES; counter++){
         a = cm.acks[counter];
         printAck(a, "client", "read");
+        // write to file
     }
-
-    // write to file
 
     exit(0);
 }

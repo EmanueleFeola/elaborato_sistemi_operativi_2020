@@ -1,4 +1,5 @@
 #include "device.h"
+#include "utils/print_utils.h"
 
 int semid_global;
 int *board_ptr;
@@ -60,7 +61,7 @@ void updateMyAcks(Message *messagesToSend, int nMessages){
     }
 }
 
-void startDevice(int semid, int nchild, int board_shmid, int acklist_shmid){
+void startDevice(char *positionFilePath, int semid, int nchild, int board_shmid, int acklist_shmid){
     // TODO: eliminare magic numbers!
     printf("<device %d> created new device \n", getpid());
 
@@ -83,7 +84,8 @@ void startDevice(int semid, int nchild, int board_shmid, int acklist_shmid){
     int nMessages = 0;                     // mi conta quanti messaggi ci sono nell array
 
     // open position file
-    positionFd = open("./input/file_posizioni.txt", O_RDONLY, 0 /* ignored */);
+    // positionFd = open("./input/file_posizioni.txt", O_RDONLY, 0 /* ignored */);
+    positionFd = open(positionFilePath, O_RDONLY, 0 /* ignored */);
 
     // board position buffers
     char nextLine[100] = {0};
@@ -114,7 +116,8 @@ void startDevice(int semid, int nchild, int board_shmid, int acklist_shmid){
             pos.col = oldMatrixIndex % COLS;
         }
 
-        // printf("my pos %d %d\n", pos.row, pos.col);
+        printf("%d %d %d msgs:", getpid(), pos.row, pos.col);
+        printAllMessageId(messagesToSend, nMessages);
 
         signalV(semid, nchild);
     }

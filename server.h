@@ -7,5 +7,6 @@
 
 void setServerSigMask();
 void serverSigHandler(int sig);
-void initDevices();
+void initDevices(char *positionFilePath);
 void freeResources();
+void initAckManager(int msgQueueKey);
