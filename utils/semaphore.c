@@ -32,18 +32,20 @@ int create_sem_set(key_t semkey, int nsem, unsigned short *values) {
  */
 void waitP(int semid, int nchild){
     semOp(semid, (unsigned short)nchild, -1); // aspetto il mio turno
-    semOp(semid, (unsigned short) 5, 0); // aspetto che board vada a 0
+    semOp(semid, (unsigned short) NDEVICES, 0); // aspetto che board vada a 0
 }
 
 /*
  * signal to other devices that I completed my tasks
  */
 void signalV(int semid, int nchild){
-    if (nchild > 0)
-        semOp(semid, (unsigned short)(nchild - 1), 1); // sblocco il device successivo
+    if (nchild < NDEVICES - 1)
+        semOp(semid, (unsigned short)(nchild + 1), 1); // sblocco il device successivo
     else{
-        semOp(semid, (unsigned short) NDEVICES, 1); // blocco la board (1 -> bloccato, 0 -> sbloccato)
-        semOp(semid, (unsigned short) NDEVICES - 1, 1); // sblocco il primo
+        // all inidce NDEVICES del set di semafori c'è il sem della board
+        semOp(semid, (unsigned short) NDEVICES, 1); // blocco la board (1 -> bloccato, 0 -> sbloccato), perche devo aspettare che sia il server a darmi il via di nuovo
+        semOp(semid, (unsigned short) 0, 1); // sblocco il primo
+        // l ordine è importante! prima blocco la board e poi sblocco il primo
         printf("\n");
     }
 }

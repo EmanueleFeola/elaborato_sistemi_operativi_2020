@@ -1,13 +1,11 @@
-/*
-Il processo server può essere terminato solamente per mezzo di un segnale SIGTERM. 
-La ricezione di tale segnale da parte del server gestisce la terminazione di tutti i processi device,
-del processo ack_manager e la chiusura di tutti i meccanismi di comunicazione/sincronizzazione tra processi (memoria condivisa, semafori, fifo, etc.).
-Ogni altro segnale non strettamente necessario per l’esecuzione del programma deve essere bloccato.
-*/
+#include "defines.h"
+#include "utils/shared_memory.h"
+#include "utils/fifo.h"
+#include "utils/print_utils.h"
+#include "device.h"
+#include "ackManager.h"
 
 void setServerSigMask();
 void serverSigHandler(int sig);
-
 void initDevices();
-
 void freeResources();

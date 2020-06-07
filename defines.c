@@ -1,12 +1,8 @@
-/// @file defines.c
-/// @brief Contiene l'implementazione delle funzioni
-///         specifiche del progetto.
-
 #include "defines.h"
-#include "arrayOp.h"
-#include "fifo.h"
-#include "shared_memory.h"
-#include <time.h>
+#include "utils/array_utils.h"
+#include "utils/fifo.h"
+#include "utils/shared_memory.h"
+#include "utils/print_utils.h"
 
 char fifoBasePath[20] = "/tmp/dev_fifo.";
 
@@ -74,7 +70,7 @@ void checkMessages(int fd, Message messages[], int *nMessages){
     } while(bR > 0);
 }
 
-// mette dentro scanPid[] i pid dei device che distano al massimmo max_distance
+// mette dentro scanPid[] i pid dei device che distano al massimmo max_distance dalla posizione pos (ovvero la posizione del device)
 int scanBoard(int *board_ptr, Position pos, int max_distance, int *scanPid){
     int row = pos.row;
     int col = pos.col;
@@ -124,37 +120,40 @@ void sendMessages(int *board_ptr, Acknowledgment *acklist_ptr, Position pos, Mes
 
     for(msgIndex = 0; msgIndex < *nMessages; msgIndex++){
         scanPidLen = scanBoard(board_ptr, pos, messages[msgIndex].max_distance, scanPid);
+        
+        // --> se mi rimangono buchi nell array sono cazzi --> devo compattare l array ogni volta che elimino un elem
+        Message msgToSend = messages[msgIndex];
+        msgToSend.pid_sender = getpid(); 
 
+        // scanPidLen: 4 --> 4, 3, 2, 1
         for(; scanPidLen > 0; scanPidLen--){
             // if pid lo ha gia ricevuto skippa al prossimo pid
-            Acknowledgment ack;
-            ack.pid_sender = 0;
-            ack.pid_receiver = scanPid[scanPidLen - 1];
-            ack.message_id = messages[msgIndex].message_id;
-            ack.timestamp = 0;
+            if(acklist_contains(acklist_ptr, msgToSend.message_id, scanPid[scanPidLen - 1]) == 1)
+                continue; // skippo alla prossima iterazione
 
-            if(acklist_contains(acklist_ptr, ack) == 1)
-                continue;
+            msgToSend.pid_receiver = scanPid[scanPidLen - 1]; 
 
-            // quando trovi un device che non lha ricevuto e glielo hai mandato, skippa next message --> break
+            printMessage(msgToSend, "device", "write");
+
             char fname[50] = {0};
             sprintf(fname, "%s%d", fifoBasePath, scanPid[scanPidLen - 1]);
 
-            printMessage(messages[msgIndex], "device", "write");
-
             int fd = get_fifo(fname, O_WRONLY);
-            write_fifo(fd, messages[msgIndex]);
+            write_fifo(fd, msgToSend);
 
             holes[sentMessages] = msgIndex;
             sentMessages++; // solo se poi glielo mando
 
-            break; // se ho trovato un device a cui mandarlo passo al prossimo messaggio
+            break; 
+            // se ho trovato un device a cui mandarlo passo al prossimo messaggio, perchè ho già inviato il messaggio corrente ad un device
         }
 
         fflush(stdout);
     }
 
+    // se mi rimangono buchi nell array sono cazzi --> devo compattare l array ogni volta che elimino un elem
     // shift verso sinistra, partendo dalla fine dei blocchi liberati
+    // --> ricompatto l array
     for(; sentMessages > 0; sentMessages--)
         shiftLeftPivot(messages, nMessages, holes[sentMessages - 1]);
 
@@ -165,35 +164,4 @@ void sendMessages(int *board_ptr, Acknowledgment *acklist_ptr, Position pos, Mes
     
     printf("\n");
     */
-}
-
-void printMatrix(int *board_ptr, int iteration){
-    int row, col;
-
-    printf("Iteration: %d\n", iteration);
-
-    char divider[8 * COLS]; // 8 è il padding tra celle
-    memset(divider, '-', sizeof(divider));
-
-    printf("%s\n", divider);
-
-    for(row = 0; row < ROWS; row++){
-        for(col = 0; col < COLS; col++){
-            int offset = row*COLS+col;
-            printf("%8d", board_ptr[offset]);
-        }
-        printf("\n");
-    }
-    
-    printf("%s\n\n", divider);
-}
-
-void printMessage(Message msg, char *who, char *mode){
-    printf("<%s %d> %s:\n\
-            pid_sender: %d\n\
-            pid_receiver: %d\n\
-            message_id: %d\n\
-            message: |%s|\n\
-            max_distance: %d\n",
-            who, getpid(), mode, msg.pid_sender, msg.pid_receiver, msg.message_id, msg.message, msg.max_distance);
 }

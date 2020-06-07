@@ -1,21 +1,4 @@
-/// @file server.c
-/// @brief Contiene l'implementazione del SERVER.
-
-#include "err_exit.h"
-#include "defines.h"
-#include "shared_memory.h"
-#include "semaphore.h"
-#include "fifo.h"
-
 #include "server.h"
-#include "device.h"
-
-#include <signal.h> 
-#include <sys/wait.h>
-#include <sys/sem.h>
-#include <sys/shm.h>
-#include <sys/stat.h>
-#include <errno.h>
 
 int semid;
 int board_shmid;
@@ -77,6 +60,18 @@ void initDevices(){
     }
 }
 
+void initAckManager(){
+    pid_t pid = fork();
+
+    if (pid == -1){
+        printf("<server> ackManager not created\n");
+    }
+
+    else if(pid == 0){
+        startAckManager(semid, acklist_shmid, 123); // TODO: key from params, not magic number
+    }
+}
+
 int main(int argc, char * argv[]) {
     printf("<server %d> created server\n", getpid());
 
@@ -84,26 +79,27 @@ int main(int argc, char * argv[]) {
     setServerSigMask();
 
     // create sem set
-    unsigned short semInitVal[] = {0, 0, 0, 0, 1, 1}; 
-    semid = create_sem_set(IPC_PRIVATE, NDEVICES + 1, semInitVal);
+    unsigned short semInitVal[] = {1, 0, 0, 0, 0, 1, 1}; // 5 sem per devices, 1 board, 1 ack_list 
+    semid = create_sem_set(IPC_PRIVATE, NDEVICES + 2, semInitVal);
     
     // create board shared memory
     board_shmid = alloc_shared_memory(IPC_PRIVATE, sizeof(int) * ROWS * COLS);
     board_ptr = get_shared_memory(board_shmid, 0); 
 
     // create ack list shared memory
-    acklist_shmid = alloc_shared_memory(IPC_PRIVATE, sizeof(Message) * 100);
+    acklist_shmid = alloc_shared_memory(IPC_PRIVATE, sizeof(Message) * 100); // TODO: niente magic numbers, #define ack_list_size 100
 
     initDevices();
+    initAckManager();
     
     int iteration = 0;
 
     while(1){
         // ogni 2 secondi sblocco la board
         sleep(2);
-        printMatrix(board_ptr, iteration);
         iteration++;
         semOp(semid, NDEVICES, -1); 
+        printMatrix(board_ptr, iteration);
     }
 
     while (wait(NULL) != -1);

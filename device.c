@@ -1,16 +1,6 @@
 #include "device.h"
-#include "defines.h"
-#include "fifo.h"
-#include "shared_memory.h"
-#include "semaphore.h"
-#include "err_exit.h"
 
-#include <sys/shm.h>
-#include <sys/stat.h>
-#include <signal.h> 
-#include <errno.h>
-#include <time.h>
-
+int semid_global;
 int *board_ptr;
 Acknowledgment *acklist_ptr;
 char fifoPath[25] = {0};
@@ -43,13 +33,41 @@ void deviceSigHandler(int sig){
     exit(0);
 }
 
+void updateMyAcks(Message *messagesToSend, int nMessages){
+    int msgIndex = 0;
+
+    for(; msgIndex < nMessages; msgIndex++){
+        Acknowledgment ack;
+        // --> se mi rimangono buchi nell array sono cazzi --> devo compattare l array ogni volta che elimino un elem
+        Message msg = messagesToSend[msgIndex];
+
+        // Build ack
+        time_t seconds = time(NULL); 
+        ack.pid_sender = msg.pid_sender;
+        ack.pid_receiver = getpid();
+        ack.message_id = msg.message_id;
+        ack.timestamp = seconds;
+
+        // if sem NDEVICES + 2 --> lo occupo --> scrivo 
+        // else occupato --> aspetto, lo occupo --> scrivo 
+        semOp(semid_global, NDEVICES + 1, -1); // blocco la ack_list
+
+        // se non l ho gia messo nell ack list, lo mando
+        if(acklist_contains(acklist_ptr, msg.message_id, getpid()) == -1)
+            write_ack(acklist_ptr, ack);    
+        
+        semOp(semid_global, NDEVICES + 1, 1); // sblocco la ack_list
+    }
+}
+
 void startDevice(int semid, int nchild, int board_shmid, int acklist_shmid){
     // TODO: eliminare magic numbers!
-
     printf("<device %d> created new device \n", getpid());
 
     // signal mask & signal handler
     setDeviceSignalMask();
+
+    semid_global = semid; // mettere come parametro di funzione invece che come globale
 
     // shm attach
     board_ptr = get_shared_memory(board_shmid, 0);
@@ -73,27 +91,14 @@ void startDevice(int semid, int nchild, int board_shmid, int acklist_shmid){
 
     while(1){
         waitP(semid, nchild);
-
-        int oldMatrixIndex = pos.row * COLS + pos.col;
         
-        checkMessages(fifoFd, messagesToSend, &nMessages);
-
-        read_acks(acklist_ptr);
-
-        if(nMessages > 0){
-            Acknowledgment ack;
-            Message msg = messagesToSend[0];
-
-            time_t seconds = time(NULL); 
-            ack.pid_sender = msg.pid_sender;
-            ack.pid_receiver = getpid();
-            ack.message_id = msg.message_id;
-            ack.timestamp = seconds;
-            if(acklist_contains(acklist_ptr, ack) == -1)
-                write_ack(acklist_ptr, ack);    
-        }
-
+        // manda i miei msg, controlla nuovi msg, aggiorna ack list in caso ho ricevuto nuovi msg
         sendMessages(board_ptr, acklist_ptr, pos, messagesToSend, &nMessages);
+        checkMessages(fifoFd, messagesToSend, &nMessages);
+        updateMyAcks(messagesToSend, nMessages);
+        
+        // movimento sulla board
+        int oldMatrixIndex = pos.row * COLS + pos.col;
 
         fillNextLine(positionFd, nextLine);
         fillNextPos(nextLine, nchild, &pos);
@@ -108,6 +113,8 @@ void startDevice(int semid, int nchild, int board_shmid, int acklist_shmid){
             pos.row = oldMatrixIndex / COLS;
             pos.col = oldMatrixIndex % COLS;
         }
+
+        // printf("my pos %d %d\n", pos.row, pos.col);
 
         signalV(semid, nchild);
     }

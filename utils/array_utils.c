@@ -1,4 +1,4 @@
-#include "arrayOp.h"
+#include "array_utils.h"
 
 /*
  * @descrizione: shifta a destra di una posizione tutti i messaggi, 
@@ -49,4 +49,17 @@ void addHead(Message messages[], int *nMessages, Message msg){
 
     messages[0] = msg;
     (*nMessages)++;
+}
+
+// ritorna l indice in cui si trova l intero n all interno di arr
+// ritorna -1 se n non si trova in arr
+int contains(int *arr, int n){
+    int index = -1;
+
+    int counter;
+    for(counter = 0; counter < sizeof(arr) / sizeof(int); counter++)
+        if(arr[counter] == n) // se ho trovato il numero
+            index = counter;
+
+    return index;
 }

@@ -1,10 +1,9 @@
-/// @file client.c
-/// @brief Contiene l'implementazione del client.
-
-#include <sys/stat.h>
 #include "defines.h"
-#include "err_exit.h"
-#include "fifo.h"
+#include "utils/err_exit.h"
+#include "utils/fifo.h"
+#include "utils/msg_queue.h"
+#include "utils/print_utils.h"
+#include <sys/stat.h>
 
 // ./client pid_receiver message_id message max_distance
 int main(int argc, char * argv[]) {
@@ -59,18 +58,36 @@ int main(int argc, char * argv[]) {
         } while(msg.max_distance < 1);
     }
 
-    printf("<client %d> Created message:\n\
-    pid_sender: %d\n\
-    pid_receiver: %d\n\
-    message_id: %d\n\
-    message: |%s|\n\
-    max_distance: %d\n",
-    getpid(), msg.pid_sender, msg.pid_receiver, msg.message_id, msg.message, msg.max_distance);
-    
+    printMessage(msg, "client", "write");
+
     printf("<client> Sending to fifo: %s\n", fifoPath);
 
     int fd = get_fifo(fifoPath, O_WRONLY);
     write_fifo(fd, msg);
 
-    return 0;
+    /* Waiting for ack from ackManager */
+
+    ClientMessage cm;
+    size_t mSize = sizeof(ClientMessage) - sizeof(long);
+
+    key_t key = 123; // TODO: get from argv
+    int msqid = getMsgQueue(key, IPC_EXCL | S_IRUSR | S_IWUSR);
+    
+    printf("<client %d> Waiting for akc of type %d\n", getpid(), msg.message_id);
+    
+    readMsgQueue(msqid, cm, mSize, msg.message_id, 0);
+    // quarto parametro message_id --> filtro i messaggi per id
+        
+    printf("<client %d> ClientMessage received:\n---start---", getpid());
+    
+    Acknowledgment a;
+    int counter; 
+    for(counter = 0; counter < NDEVICES; counter++){
+        a = cm.acks[counter];
+        printAck(a, "client", "read");
+    }
+
+    // write to file
+
+    exit(0);
 }

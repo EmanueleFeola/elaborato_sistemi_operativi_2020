@@ -1,11 +1,7 @@
-/// @file fifo.c
-/// @brief Contiene l'implementazione delle funzioni
-///         specifiche per la gestione delle FIFO.
-
-#include "defines.h"
 #include <sys/stat.h>
-#include "fifo.h"
+#include "../defines.h"
 #include "err_exit.h"
+#include "fifo.h"
 
 void create_fifo(char *fifoPath){
     int res = mkfifo(fifoPath, S_IRUSR | S_IWUSR);

@@ -1,0 +1,7 @@
+TODO
+- invece che eliminare un messaggio e quindi creare la necessità di ricompattare l array facendo gli shift, 
+segno il messaggio come già inviato, quindi quando faccio il cast a Message / Ack controllo se un parametro X == -1 (da decidere quale, probabilmente message_id)
+se X == -1 (o cmq un valore non regolare), so che quello è un messaggio che non devo cagare, ma su cui devo scriverne uno piu nuovo 
+- refactoring client.c che fa schifo
+- quando il client invia un messaggio il campo message_id deve essere univoco --> check shared memory che non ci sia gia?
+- nella prima iterazione il device 1 non viene visualizzato sulla matrix
