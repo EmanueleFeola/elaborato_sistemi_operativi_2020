@@ -1,11 +1,5 @@
-#include "defines.h"
-#include "utils/err_exit.h"
-#include "utils/fifo.h"
-#include "utils/msg_queue.h"
-#include "utils/print_utils.h"
-#include <sys/stat.h>
+#include "client.h"
 
-// ./client msg_queue_key pid_receiver message_id message max_distance
 int main(int argc, char * argv[]) {
     // check params
     if(argc != 2 && argc != 6)
@@ -14,6 +8,8 @@ int main(int argc, char * argv[]) {
     int msgQueueKey = atoi(argv[1]);
     if (msgQueueKey <= 0)
         ErrExit("<client> incorrect params: msg_queue_key must be greater than zero");
+
+    printf("finish writing\n");
 
     Message msg;
     msg.pid_sender = getpid();
@@ -83,14 +79,46 @@ int main(int argc, char * argv[]) {
     // quarto parametro message_id --> filtro gli ack per id
         
     printf("<client %d> ClientMessage received:\n", getpid());
+
+    writeClientMessage(cm, msg.message_id, msg.message);
     
+    exit(0);
+}
+
+void writeClientMessage(ClientMessage cm, int message_id, char *message){
+    char filename[50];
+    sprintf(filename, "out_%d.txt", message_id);
+
+    printf("Started writing on %s\n", filename);
+
+    int fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+    if(fd == -1)
+        printf("open failed: %s\n", filename);
+
+    char header[150];
+    sprintf(header, "Messaggio %d: %s\nLista acks:\n", message_id, message);
+    if(write(fd, header, strlen(header)) == -1)
+        ErrExit("failed write 1");
+
+    printf("header: %s\n", header);
+
+    char row[100];
+
     Acknowledgment a;
     int counter; 
     for(counter = 0; counter < NDEVICES; counter++){
         a = cm.acks[counter];
-        printAck(a, "client", "read");
-        // write to file
+        
+        //printAck(a, "client", "read");
+
+        memset(row, 0, sizeof(row));
+        sprintf(row, "%d, %d, %ld\n", a.pid_sender, a.pid_receiver, a.timestamp);
+        printf("%s\n", row);
+        int bW = write(fd, row, strlen(row));
+        if(bW == -1)
+            ErrExit("failed write\n");
     }
 
-    exit(0);
+    close(fd);
+    printf("Finished writing\n");
 }
