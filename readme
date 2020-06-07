@@ -9,4 +9,4 @@ se X == -1 (o cmq un valore non regolare), so che quello è un messaggio che non
 
 QUICK START
 clear && make clean && make && ./server 123 ./input/file_posizioni.txt
-clear && source client_hub.sh 1 18964 5 hola
+clear && source 123 client_hub.sh 1 18964 5 hola

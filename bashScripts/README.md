@@ -18,6 +18,7 @@ client_hub.sh
 
 > source client_hub times_to_send pid_receiver message_id message max_distance
 
+- msq_queue_key (int): la msq_queue_key su cui comunicano il client e ackManager
 - times_to_send (int): quanti client devo avviare
 - pid_receiver (int): pid del device a cui mandare il messaggio creato dal client
 - message_id (int): id del messaggio
@@ -27,9 +28,9 @@ client_hub.sh
 - max_distance (int): massima distanza a cui il device può inviare messaggi
 
 *NB*: se il messaggio inserito ha spazi in mezzo, mettere " all inizio e alla fine
-
-- e.g: source client_hub.sh 1 2 3 "messaggio con spazi" 4
+- e.g: source client_hub.sh 123 4 5 6 "messaggio con spazi" 4
 
 ##### Esempio di esecuzione
+*NB*: nell'esempio le fifo non esistono (--> failed open fifo)
 
-![image-20200516214321032](client.png)
+![image-20200516214321032](clientScript.png)
