@@ -1,4 +1,5 @@
 #include "client.h"
+#include <time.h>
 
 int main(int argc, char * argv[]) {
     // check params
@@ -108,11 +109,15 @@ void writeClientMessage(ClientMessage cm, int message_id, char *message){
     int counter; 
     for(counter = 0; counter < NDEVICES; counter++){
         a = cm.acks[counter];
-        
         //printAck(a, "client", "read");
+        
+        struct tm  ts;
+        ts = *localtime(&a.timestamp);
+        char buf[80];
+        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &ts); // maggiori info su https://www.epochconverter.com/programming/c
 
         memset(row, 0, sizeof(row));
-        sprintf(row, "%d, %d, %ld\n", a.pid_sender, a.pid_receiver, a.timestamp);
+        sprintf(row, "%d, %d, %s\n", a.pid_sender, a.pid_receiver, buf);
         printf("%s\n", row);
         int bW = write(fd, row, strlen(row));
         if(bW == -1)
