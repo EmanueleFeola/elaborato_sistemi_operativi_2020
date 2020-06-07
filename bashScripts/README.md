@@ -16,7 +16,7 @@ client_hub.sh
 
 ##### Parametri
 
-> source client_hub times_to_send pid_receiver message_id message max_distance
+> source client_hub msq_queue_key times_to_send pid_receiver message_id message max_distance
 
 - msq_queue_key (int): la msq_queue_key su cui comunicano il client e ackManager
 - times_to_send (int): quanti client devo avviare
