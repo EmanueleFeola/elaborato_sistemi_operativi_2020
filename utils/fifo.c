@@ -1,5 +1,8 @@
+/// @file fifo.c
+/// @brief Contiene l'implementazione delle funzioni per la gestione delle FIFO.
+
 #include <sys/stat.h>
-#include "../defines.h"
+#include "../inc/defines.h"
 #include "err_exit.h"
 #include "fifo.h"
 

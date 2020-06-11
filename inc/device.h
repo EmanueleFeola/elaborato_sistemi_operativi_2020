@@ -1,6 +1,6 @@
 #include "defines.h"
-#include "utils/fifo.h"
-#include "utils/shared_memory.h"
+#include "../utils/fifo.h"
+#include "../utils/shared_memory.h"
 
 void startDevice(char *positionFilePath, int semid, int nchild, int board_shmid, int acklist_shmid);
 void setDeviceSignalMask();

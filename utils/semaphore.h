@@ -1,8 +1,11 @@
+/// @file semaphore.h
+/// @brief Contiene la definizione delle funzioni
+///         specifiche per la gestione dei semafori.
 #pragma once
 
 #include <sys/stat.h>
 #include <sys/sem.h>
-#include "../defines.h"
+#include "../inc/defines.h"
 
 union semun {
     int val;

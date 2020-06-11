@@ -1,8 +1,8 @@
 #include "defines.h"
-#include "utils/err_exit.h"
-#include "utils/fifo.h"
-#include "utils/msg_queue.h"
-#include "utils/print_utils.h"
+#include "../utils/err_exit.h"
+#include "../utils/fifo.h"
+#include "../utils/msg_queue.h"
+#include "../utils/print_utils.h"
 #include <sys/stat.h>
 #include <unistd.h>
 

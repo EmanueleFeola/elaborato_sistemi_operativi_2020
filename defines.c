@@ -1,8 +1,9 @@
-#include "defines.h"
+#include "inc/defines.h"
 #include "utils/array_utils.h"
 #include "utils/fifo.h"
 #include "utils/shared_memory.h"
 #include "utils/print_utils.h"
+#include "inc/ackManager.h"
 
 char fifoBasePath[20] = "/tmp/dev_fifo.";
 

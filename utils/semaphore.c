@@ -1,6 +1,6 @@
 /// @file semaphore.c
 /// @brief Contiene l'implementazione delle funzioni
-///         specifiche per la gestione dei SEMAFORI.
+///         specifiche per la gestione dei semafori.
 
 #include "err_exit.h"
 #include "semaphore.h"
@@ -28,7 +28,9 @@ int create_sem_set(key_t semkey, int nsem, unsigned short *values) {
 }
 
 /*
- * wait until it is my turn and board is available 
+ * @descrizione: aspetta finchè non è il turno del device nchild-esimo e finchè la board è occupata
+ * @param semid: identificatore del set di semafori su cui operare
+ * @param nchild: l'indice del device
  */
 void waitP(int semid, int nchild){
     semOp(semid, (unsigned short)nchild, -1); // aspetto il mio turno
@@ -36,14 +38,17 @@ void waitP(int semid, int nchild){
 }
 
 /*
- * signal to other devices that I completed my tasks
+ * @descrizione: libera le risorse che il device nchild-esimo aveva bloccato prima di entrare nelle sezione critica di accesso a risorse condivise
+ * @param semid: identificatore del set di semafori su cui operare
+ * @param nchild: l'indice del device
  */
 void signalV(int semid, int nchild){
     if (nchild < NDEVICES - 1)
         semOp(semid, (unsigned short)(nchild + 1), 1); // sblocco il device successivo
     else{
-        // all inidce NDEVICES del set di semafori c'è il sem della board
-        semOp(semid, (unsigned short) NDEVICES, 1); // blocco la board (1 -> bloccato, 0 -> sbloccato), perche devo aspettare che sia il server a darmi il via di nuovo
+        // all indice NDEVICES del set di semafori c'è il sem della board
+        // blocco la board (1 -> bloccato, 0 -> sbloccato), perche devo aspettare che sia il server a darmi il via di nuovo
+        semOp(semid, (unsigned short) NDEVICES, 1);
         semOp(semid, (unsigned short) 0, 1); // sblocco il primo
         // l ordine è importante! prima blocco la board e poi sblocco il primo
         printf("\n");

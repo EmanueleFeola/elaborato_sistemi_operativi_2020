@@ -1,6 +1,9 @@
+/// @file msg_queue.h
+/// @brief Contiene la definizione delle funzioni per la gestione delle message queues.
+
 #pragma once
 
-#include "../defines.h"
+#include "../inc/defines.h"
 #include <sys/msg.h>
 #include "err_exit.h"
 

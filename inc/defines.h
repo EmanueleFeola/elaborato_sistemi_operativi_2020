@@ -18,9 +18,9 @@
 #include <time.h>
 
 // utils
-#include "utils/semaphore.h"
+#include "../utils/semaphore.h"
 // #include "utils/msg_queue.h"
-#include "utils/err_exit.h"
+#include "../utils/err_exit.h"
 
 #define NDEVICES 5
 #define ROWS 5

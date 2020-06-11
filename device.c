@@ -1,6 +1,7 @@
-#include "device.h"
+#include "inc/device.h"
 #include "utils/print_utils.h"
 #include "utils/array_utils.h"
+#include "inc/ackManager.h"
 
 int semid_global;
 int *board_ptr;
@@ -60,7 +61,7 @@ void checkMessages(int fd, Message messages[], int *nMessages){
             int howmany = acklist_countByMsgId(acklist_ptr, msg.message_id);
             
             if(howmany != NDEVICES - 1) // if non sono l ultimo a cui mancava
-                addHead(messages, nMessages, msg);
+                addAsHead(messages, nMessages, msg);
             else
                 updateMyAcks(&msg, 1);
         }

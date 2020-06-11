@@ -1,4 +1,7 @@
-#include "../defines.h"
+/// @file msg_queue.c
+/// @brief Contiene l'implementazione delle funzioni per la gestione delle message queues.
+
+#include "../inc/defines.h"
 #include "msg_queue.h"
 
 int getMsgQueue(key_t key, int flags){
@@ -9,6 +12,7 @@ int getMsgQueue(key_t key, int flags){
 
     return msqid;
 }
+
 
 void readMsgQueue(int msqid, ClientMessage *msgp, size_t msgsz, long msgtype, int msgflg){
     if (msgrcv(msqid, msgp, msgsz, msgtype, msgflg) == -1)

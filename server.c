@@ -1,4 +1,4 @@
-#include "server.h"
+#include "inc/server.h"
 
 int semid;
 int board_shmid;
