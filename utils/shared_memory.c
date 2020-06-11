@@ -12,8 +12,8 @@
 #include "shared_memory.h"
 
 
+// get, or create, a shared memory segment
 int alloc_shared_memory(key_t shmKey, size_t size) {
-    // get, or create, a shared memory segment
     int shmid = shmget(shmKey, size, IPC_CREAT | S_IRUSR | S_IWUSR);
     if (shmid == -1)
         ErrExit("shmget failed");
@@ -21,8 +21,8 @@ int alloc_shared_memory(key_t shmKey, size_t size) {
     return shmid;
 }
 
+// attach the shared memory
 void *get_shared_memory(int shmid, int shmflg) {
-    // attach the shared memory
     void *ptr_sh = shmat(shmid, NULL, shmflg);
     if (ptr_sh == (void *)-1)
         ErrExit("shmat failed");
@@ -30,26 +30,17 @@ void *get_shared_memory(int shmid, int shmflg) {
     return ptr_sh;
 }
 
+// detach the shared memory segments
 void free_shared_memory(void *ptr_sh) {
-    // detach the shared memory segments
     if (shmdt(ptr_sh) == -1)
         ErrExit("shmdt failed");
 }
 
+// delete the shared memory segment
 void remove_shared_memory(int shmid) {
-    // delete the shared memory segment
     if (shmctl(shmid, IPC_RMID, NULL) == -1)
         ErrExit("shmctl failed");
 }
-
-/*
-typedef struct {
-    pid_t pid_sender;
-    pid_t pid_receiver;
-    int message_id;
-    time_t timestamp;
-} Acknowledgment;
-*/
 
 void write_ack(Acknowledgment *ptr, Acknowledgment ack){
     int counter = 0;
@@ -69,7 +60,41 @@ void write_ack(Acknowledgment *ptr, Acknowledgment ack){
     }
 }
 
-int acklist_contains(Acknowledgment *ptr, int message_id, pid_t pid_receiver){
+// ritorna il numero di occorrenze di un message_id nella acklist
+int acklist_countByMsgId(Acknowledgment *ptr, int message_id){
+    int found = 0;
+    int counter;
+
+    Acknowledgment *a;
+
+    for(counter = 0; counter < 100; counter++){
+        a = &ptr[counter];
+        if(a->message_id == message_id)
+            found++;
+    }
+
+    return found;
+}
+
+// ritorna 1 se c'è già un ack identificato da message_id
+// meglio chiamare questa invece che la funzione sopra se 
+// ho bisogno di sapere solo se un certo message_id è già stato inserito 
+int acklist_contains_message_id(Acknowledgment *ptr, int message_id){
+    int counter = 0;
+
+    Acknowledgment *a;
+
+    for(; counter < 100; counter++){
+        a = &ptr[counter];
+        if(a->message_id == message_id)
+            return 1;
+    }
+
+    return -1;
+}
+
+// ritorna 1 se il device con pid pid_receiver ha gia scritto l ack identificato da message_id
+int acklist_contains_tupla(Acknowledgment *ptr, int message_id, pid_t pid_receiver){
     int counter = 0;
 
     Acknowledgment *a;

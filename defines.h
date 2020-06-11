@@ -57,6 +57,5 @@ typedef struct {
 void fillNextLine(int fd, char nextLine[]);
 void fillNextPos(char *nextLine, int nchild, Position *nextPos);
 
-void checkMessages(int fd, Message messages[], int *nMessages);
 void sendMessages(int *board_ptr, Acknowledgment *acklist_ptr, Position pos, Message messages[], int *nMessages);
 int scanBoard(int *shm_ptr, Position pos, int max_distance, int *scanPid);

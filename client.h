@@ -8,3 +8,5 @@
 
 // scrive su file il messaggio mandatogli da ackmanager
 void writeClientMessage(ClientMessage cm, int message_id, char *message);
+void setClientSignalMask();
+void clientSigHandler(int sig);

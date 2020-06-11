@@ -25,9 +25,26 @@ void setAckSignalMask(){
     signal(SIGTERM, ackSigHandler);
 }
 
+// ordina gli ack per timestamp (decrescente)
+// quindi come primo Ack di cm->acks troverò l ack con il timestamp più grande, ovvero quello più recente)
+void sortAck(ClientMessage *cm){
+	for (int i = 0; i < NDEVICES; i++)                     //Loop for descending ordering
+	{
+		for (int j = 0; j < NDEVICES; j++)             //Loop for comparing other values
+		{
+			if (cm->acks[j].timestamp < cm->acks[i].timestamp)                //Comparing other array elements
+			{
+				Acknowledgment tmp = cm->acks[i];         //Using temporary variable for storing last value
+				cm->acks[i] = cm->acks[j];            //replacing value
+				cm->acks[j] = tmp;             //storing last value
+			}
+		}
+	}
+}
+
 // controlla il segmento di shared memory per vedere se qualche messaggio è stato ricevuto da tutti i device
 // in caso positivo manda la lista di ack al client
-// NB: 
+// scorre il segmento di memoria condivisa una sola volta e calcola l array delle occorrenze per i message_id che trova 
 void ackManagerRoutine(Acknowledgment *ptr, int msgid){
     int found_message_id_list[10] = {0}; // message_id degli ack che sono stati ricevuti da tutti
     int found_message_id_counter = 0;
@@ -44,13 +61,14 @@ void ackManagerRoutine(Acknowledgment *ptr, int msgid){
             // printAck(*ack, "ackManager", "read");
 
             int index = contains(found_message_id_list, ack->message_id); // ritorna indice a cui l ha trovato, oppure -1
-            // se il message_id corrente è già stato registrato, aggiorno il contatore delle sue occorrenze
-            if(index != -1){
-                occourrences[index]++;
-            } else{
-                // altrimenti lo inserisco nella lista dei message_id trovati
+            if(index == -1){
+                // inserisco message_id nella lista dei message_id trovati
                 found_message_id_list[found_message_id_counter] = ack->message_id;
                 found_message_id_counter++;
+            } else{
+                // se il message_id corrente è già stato incontrato, aggiorno il contatore delle sue occorrenze
+                // message_id gia presente nella lista di message_id trovati, quindi aggiorno le sue occorrenze
+                occourrences[index]++;
             }
         }
     }
@@ -58,12 +76,14 @@ void ackManagerRoutine(Acknowledgment *ptr, int msgid){
     // scorro le occorrenze e guardo se qualche msg è arrivato a tutti 
     int occCounter;
     for(occCounter = 0; occCounter < sizeof(occourrences) / sizeof(int); occCounter++){
+        /*
         if(occourrences[occCounter] > 1)
             printf("#DEBUG: %d (%d times)\n", found_message_id_list[occCounter], occourrences[occCounter]);
-
+        */
+       
         // se tutti i device lo hanno ricevuto --> invia al client e segna tutti gli ack come sovrascrivibili
         if(occourrences[occCounter] == NDEVICES){ 
-            printf("<ackManager> Il messaggio %d è arrivato a tutti\n", found_message_id_list[occCounter]);
+            // printf("<ackManager> Il messaggio %d è arrivato a tutti\n", found_message_id_list[occCounter]);
 
             ClientMessage cm;
             cm.mtype = found_message_id_list[occCounter];
@@ -76,18 +96,20 @@ void ackManagerRoutine(Acknowledgment *ptr, int msgid){
 
                 if(ack->message_id == found_message_id_list[occCounter]){
                     cm.acks[ackCounter] = *ack; 
-                    //ack->message_id = -1; //reset
+                    ack->message_id = 0; //reset
                     ackCounter++;
                     // printAck(*ack, "ackManagerRoutine", "loop");
                 }
             }
+
+            // funzione di ordinamento ack per timestamp
+            sortAck(&cm);
 
             Acknowledgment test;
             int counter; 
             for(counter = 0; counter < NDEVICES; counter++){
                 test = cm.acks[counter];
                 printAck(test, "ackManager", "test");
-                // write to file
             }
             
             writeMsgQueue(msgid, &cm, mSize, 0);

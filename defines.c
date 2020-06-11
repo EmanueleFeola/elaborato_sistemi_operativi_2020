@@ -53,23 +53,6 @@ void fillNextPos(char *nextLine, int nchild, Position *pos){
     pos->col = atoi(buffer);
 }
 
-// mette dentro messages il nuovo messaggio letto
-// e shifta a destra tutti gli altri
-void checkMessages(int fd, Message messages[], int *nMessages){
-    int bR = -1;
-
-    Message msg;
-
-    do{
-        bR = read(fd, &msg, sizeof(Message));
-        if(bR != 0){
-            printMessage(msg, "device", "read");
-            addHead(messages, nMessages, msg);
-        }
-
-    } while(bR > 0);
-}
-
 // mette dentro scanPid[] i pid dei device che distano al massimmo max_distance dalla posizione pos (ovvero la posizione del device)
 int scanBoard(int *board_ptr, Position pos, int max_distance, int *scanPid){
     int row = pos.row;
@@ -128,12 +111,12 @@ void sendMessages(int *board_ptr, Acknowledgment *acklist_ptr, Position pos, Mes
         // scanPidLen: 4 --> 4, 3, 2, 1
         for(; scanPidLen > 0; scanPidLen--){
             // if pid lo ha gia ricevuto skippa al prossimo pid
-            if(acklist_contains(acklist_ptr, msgToSend.message_id, scanPid[scanPidLen - 1]) == 1)
+            if(acklist_contains_tupla(acklist_ptr, msgToSend.message_id, scanPid[scanPidLen - 1]) == 1)
                 continue; // skippo alla prossima iterazione
 
             msgToSend.pid_receiver = scanPid[scanPidLen - 1]; 
 
-            printMessage(msgToSend, "device", "write");
+            // printMessage(msgToSend, "device", "write");
 
             char fname[50] = {0};
             sprintf(fname, "%s%d", fifoBasePath, scanPid[scanPidLen - 1]);

@@ -8,3 +8,4 @@ void deviceSigHandler(int sig);
 void waitP(int semid, int nchild);
 void signalV(int semid, int nchild);
 void updateMyAcks(Message *messagesToSend, int nMessages);
+void checkMessages(int fd, Message messages[], int *nMessages);

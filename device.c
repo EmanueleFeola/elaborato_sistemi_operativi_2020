@@ -1,5 +1,6 @@
 #include "device.h"
 #include "utils/print_utils.h"
+#include "utils/array_utils.h"
 
 int semid_global;
 int *board_ptr;
@@ -34,6 +35,39 @@ void deviceSigHandler(int sig){
     exit(0);
 }
 
+// mette dentro messages il nuovo messaggio letto
+// e shifta a destra tutti gli altri
+void checkMessages(int fd, Message messages[], int *nMessages){
+    int bR = -1;
+
+    Message msg;
+
+    do{
+        bR = read(fd, &msg, sizeof(Message));
+        if(bR != 0){
+            // printMessage(msg, "device", "read");
+            int lsb = msg.message_id & 1;
+            if(lsb){
+                // setto il lsb a 0
+                msg.message_id &= 0xfffffffe; // non influenza i primi 31 bit, ma solo il 32esimo, che viene messo a 0
+                if(acklist_contains_message_id(acklist_ptr, msg.message_id) == 1){
+                    // avverti il clent che il message_id non è valido perchè c'è già
+                    kill(msg.pid_sender, SIGUSR1);
+                    return;
+                }                
+            }         
+
+            int howmany = acklist_countByMsgId(acklist_ptr, msg.message_id);
+            
+            if(howmany != NDEVICES - 1) // if non sono l ultimo a cui mancava
+                addHead(messages, nMessages, msg);
+            else
+                updateMyAcks(&msg, 1);
+        }
+
+    } while(bR > 0);
+}
+
 void updateMyAcks(Message *messagesToSend, int nMessages){
     int msgIndex = 0;
 
@@ -54,9 +88,9 @@ void updateMyAcks(Message *messagesToSend, int nMessages){
         semOp(semid_global, NDEVICES + 1, -1); // blocco la ack_list
 
         // se non l ho gia messo nell ack list, lo mando
-        if(acklist_contains(acklist_ptr, msg.message_id, getpid()) == -1)
+        if(acklist_contains_tupla(acklist_ptr, msg.message_id, getpid()) == -1)
             write_ack(acklist_ptr, ack);    
-        
+
         semOp(semid_global, NDEVICES + 1, 1); // sblocco la ack_list
     }
 }
