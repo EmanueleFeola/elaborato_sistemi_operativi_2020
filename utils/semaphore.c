@@ -17,7 +17,6 @@ int create_sem_set(key_t semkey, int nsem, unsigned short *values) {
     if (semid == -1)
         ErrExit("semget failed");
 
-    // Initialize the semaphore set
     union semun arg;
     arg.array = values;
 
@@ -27,21 +26,16 @@ int create_sem_set(key_t semkey, int nsem, unsigned short *values) {
     return semid;
 }
 
-/*
- * @descrizione: aspetta finchè non è il turno del device nchild-esimo e finchè la board è occupata
- * @param semid: identificatore del set di semafori su cui operare
- * @param nchild: l'indice del device
- */
+void delete_sem_set(int semid){
+    if (semctl(semid, 0 /*ignored*/, IPC_RMID, NULL) == -1)
+        ErrExit("semctl IPC_RMID failed");
+}
+
 void waitP(int semid, int nchild){
     semOp(semid, (unsigned short)nchild, -1); // aspetto il mio turno
     semOp(semid, (unsigned short) NDEVICES, 0); // aspetto che board vada a 0
 }
 
-/*
- * @descrizione: libera le risorse che il device nchild-esimo aveva bloccato prima di entrare nelle sezione critica di accesso a risorse condivise
- * @param semid: identificatore del set di semafori su cui operare
- * @param nchild: l'indice del device
- */
 void signalV(int semid, int nchild){
     if (nchild < NDEVICES - 1)
         semOp(semid, (unsigned short)(nchild + 1), 1); // sblocco il device successivo

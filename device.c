@@ -19,25 +19,18 @@ void setDeviceSignalMask(){
 }
 
 void deviceSigHandler(int sig){
-    printf("<device %d> terminating\n", getpid());
+    coloredPrintf("yellow", 0, "<device %d> terminating\n", getpid());
 
-    if(shmdt(board_ptr) == -1)
-        ErrExit("<device> shmdt failed\n");
+    free_shared_memory(board_ptr);
+    free_shared_memory(acklist_ptr);
+    unlink_fifo(fifoPath);
 
-    if(shmdt(acklist_ptr) == -1)
-        ErrExit("<device> shmdt failed\n");
-
-    if(unlink(fifoPath) == -1)
-        ErrExit("<device> unlink fifo failed\n");
-    
     if(close(positionFd) == -1)
         ErrExit("<device> closing file failed\n");
 
     exit(0);
 }
 
-// mette dentro messages il nuovo messaggio letto
-// e shifta a destra tutti gli altri
 void checkMessages(int fd, Message messages[], int *nMessages){
     int bR = -1;
 
@@ -46,7 +39,6 @@ void checkMessages(int fd, Message messages[], int *nMessages){
     do{
         bR = read(fd, &msg, sizeof(Message));
         if(bR != 0){
-            // printMessage(msg, "device", "read");
             int lsb = msg.message_id & 1;
             if(lsb){
                 // setto il lsb a 0
@@ -74,7 +66,6 @@ void updateMyAcks(Message *messagesToSend, int nMessages){
 
     for(; msgIndex < nMessages; msgIndex++){
         Acknowledgment ack;
-        // --> se mi rimangono buchi nell array sono cazzi --> devo compattare l array ogni volta che elimino un elem
         Message msg = messagesToSend[msgIndex];
 
         // Build ack
@@ -84,11 +75,8 @@ void updateMyAcks(Message *messagesToSend, int nMessages){
         ack.message_id = msg.message_id;
         ack.timestamp = seconds;
 
-        // if sem NDEVICES + 2 --> lo occupo --> scrivo 
-        // else occupato --> aspetto, lo occupo --> scrivo 
         semOp(semid_global, NDEVICES + 1, -1); // blocco la ack_list
 
-        // se non l ho gia messo nell ack list, lo mando
         if(acklist_contains_tupla(acklist_ptr, msg.message_id, getpid()) == -1)
             write_ack(acklist_ptr, ack);    
 
@@ -97,15 +85,14 @@ void updateMyAcks(Message *messagesToSend, int nMessages){
 }
 
 void startDevice(char *positionFilePath, int semid, int nchild, int board_shmid, int acklist_shmid){
-    // TODO: eliminare magic numbers!
-    printf("<device %d> created new device \n", getpid());
+    coloredPrintf("yellow", 0, "<device %d> created new device \n", getpid());
 
     // signal mask & signal handler
     setDeviceSignalMask();
 
     semid_global = semid; // mettere come parametro di funzione invece che come globale
 
-    // shm attach
+    // get shm pointer
     board_ptr = get_shared_memory(board_shmid, 0);
     acklist_ptr = (Acknowledgment *)get_shared_memory(acklist_shmid, 0);
 
@@ -151,7 +138,7 @@ void startDevice(char *positionFilePath, int semid, int nchild, int board_shmid,
             pos.col = oldMatrixIndex % COLS;
         }
 
-        printf("%d %d %d msgs:", getpid(), pos.row, pos.col);
+        coloredPrintf("default", 0, "%d %d %d msgs:", getpid(), pos.row, pos.col);
         printAllMessageId(messagesToSend, nMessages);
 
         signalV(semid, nchild);

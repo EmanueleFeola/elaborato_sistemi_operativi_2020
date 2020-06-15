@@ -11,7 +11,7 @@ void setClientSignalMask(){
 }
 
 void clientSigHandler(int sig){
-    printf("<client %d> message_id is not unique, terminating\n", getpid());
+    coloredPrintf("red", 1, "<client %d> message_id is not unique, terminating\n", getpid());
     exit(0);
 }
 
@@ -44,31 +44,29 @@ int main(int argc, char * argv[]) {
         msg.max_distance = atoi(argv[5]);
 
         if(msg.pid_receiver < 1 || msg.message_id < 0 || msg.max_distance < 1){
-            printf("<client %d> script input < 0\n", getpid());
+            coloredPrintf("red", 0, "<client %d> script input < 0\n", getpid());
             exit(1);
         }
     }
     else{
-        // se scambio l ordine della scanf di message e una delle altre scanf non funzia.....dc
-        // TODO: risolvere ...
-        printf("<client %d> Insert message: \n", getpid());
+        coloredPrintf("cyan", 0, "<client %d> Insert message: \n", getpid());
         scanf("%[^\n]%*c", msg.message);
 
         do{
             char pidString[7] = {0};
-            printf("<client> Insert destination PID:\n");
+            coloredPrintf("cyan", 0, "<client> Insert destination PID:\n");
             scanf("%s", pidString);
             sprintf(fifoPath, "%s%s", fifoPath, pidString);
             msg.pid_receiver = atoi(pidString);
         } while(msg.pid_receiver < 1);
 
         do{
-            printf("<client %d> Insert message id: \n", getpid());
+            coloredPrintf("cyan", 0, "<client %d> Insert message id: \n", getpid());
             scanf("%d", &msg.message_id);
         } while(msg.message_id < 0);
 
         do{
-            printf("<client %d> Insert max distance: \n", getpid());
+            coloredPrintf("cyan", 0, "<client %d> Insert max distance: \n", getpid());
             scanf("%d", &msg.max_distance);
         } while(msg.max_distance < 1);
     }
@@ -79,31 +77,25 @@ int main(int argc, char * argv[]) {
     msg.message_id <<= 1;
     msg.message_id |= 1;
 
-    // printf("il bit nascosto è: %d\n", message_id&1);
+    // printMessage(msg, "client", "write"); // debug purposes only
 
-    // message_id >>= 1; // ripristino il message_id originale
-    // printf("message_id originale %d\n", message_id);
-
-    printMessage(msg, "client", "write");
-
-    printf("<client> Sending to fifo: %s\n", fifoPath);
+    coloredPrintf("default", 0,"<client> Sending to fifo: %s\n", fifoPath);
 
     int fd = get_fifo(fifoPath, O_WRONLY);
     write_fifo(fd, msg);
 
-    /* Waiting for ack from ackManager */
+    /* Waiting for ack list from ackManager */
 
     ClientMessage cm;
     size_t mSize = sizeof(ClientMessage) - sizeof(long);
 
     int msqid = getMsgQueue(msgQueueKey, IPC_EXCL | S_IRUSR | S_IWUSR);
     
-    printf("<client %d> Waiting for akc of type %d\n", getpid(), msg.message_id & 0xfffffffe);
+    coloredPrintf("yellow", 1,"<client %d> Waiting for akc of type %d\n", getpid(), msg.message_id & 0xfffffffe);
     
     readMsgQueue(msqid, &cm, mSize, msg.message_id & 0xfffffffe, 0);
-    // quarto parametro message_id --> filtro gli ack per id
         
-    printf("\n<client %d> ClientMessage received\n", getpid());
+    coloredPrintf("green", 0, "\n<client %d> ClientMessage received\n", getpid());
 
     writeClientMessage(cm, msg.message_id >> 1, msg.message);
     
@@ -116,7 +108,7 @@ void writeClientMessage(ClientMessage cm, int message_id, char *message){
 
     int fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
     if(fd == -1)
-        printf("open failed: %s\n", filename);
+        coloredPrintf("red", 1, "open failed: %s\n", filename);
 
     char header[150];
     sprintf(header, "Messaggio %d: %s\nLista acks:\n", message_id, message);
@@ -131,14 +123,12 @@ void writeClientMessage(ClientMessage cm, int message_id, char *message){
     for(counter = NDEVICES; counter > 0; counter--){
         a = cm.acks[counter - 1];
         a.message_id >>= 1; // ripristino valore originale
-        
-        struct tm  ts;
-        ts = *localtime(&a.timestamp);
-        char buf[80];
-        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &ts); // maggiori info su https://www.epochconverter.com/programming/c
+
+        char date[50];
+        timestampToDate(a.timestamp, date, 50);
 
         memset(row, 0, sizeof(row));
-        sprintf(row, "%d, %d, %s\n", a.pid_sender, a.pid_receiver, buf);
+        sprintf(row, "%d, %d, %s\n", a.pid_sender, a.pid_receiver, date);
 
         int bW = write(fd, row, strlen(row));
         if(bW == -1)
@@ -146,5 +136,11 @@ void writeClientMessage(ClientMessage cm, int message_id, char *message){
     }
 
     close(fd);
-    printf("<client %d> Finished writing on file\n", getpid());
+    coloredPrintf("green", 0, "<client %d> Finished writing on file\n", getpid());
+}
+
+void timestampToDate(time_t timestamp, char date[], int size){
+    struct tm  ts;
+    ts = *localtime(&timestamp);
+    strftime(date, size, "%Y-%m-%d %H:%M:%S", &ts);
 }

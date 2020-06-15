@@ -30,3 +30,8 @@ void write_fifo(int fd, Message msg){
     if(close(fd) == -1)
         ErrExit("failed close fifo");
 }
+
+void unlink_fifo(char *fifoPath){
+    if(unlink(fifoPath) == -1)
+        ErrExit("<device> unlink fifo failed\n");
+}
